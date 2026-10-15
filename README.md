@@ -24,16 +24,17 @@
 - `schema18_rules_suggestions.sql` : 회칙 본문 + 건의사항 SQL (18단계)
 - `schema19_rules_owner.sql` : 회칙 수정은 대표만 SQL (19단계)
 - `schema20_comments_notices.sql` : 모임 댓글 + 공지사항 SQL (20단계)
+- `schema21_guest_sync.sql` : 전화번호 계정 로그인 정보 동기화 SQL (21단계)
 
 ## 처음 한 번 할 일
 1. Supabase 대시보드 → 왼쪽 메뉴 **SQL Editor** → `schema.sql` 내용을 붙여넣고 **Run**
-2. 같은 곳에서 `schema2_auth.sql`, 이어서 `schema3_admin_code.sql`, `schema4_profile.sql`, `schema5_guest_birth.sql`, `schema6_display.sql`, `schema7_create_rules.sql`, `schema8_meetup_options.sql`, `schema9_nickname.sql`, `schema10_approval.sql`, `schema11_owner.sql`, `schema12_guest_default.sql`, `schema13_phone.sql`, `schema14_host_edit.sql`, `schema15_join_mode.sql`, `schema16_guest_request.sql`, `schema17_admin_request.sql`, `schema18_rules_suggestions.sql`, `schema19_rules_owner.sql`, `schema20_comments_notices.sql` 도 **Run** (3단계 파일 안의 관리자 코드를 먼저 원하는 값으로 바꾸세요)
+2. 같은 곳에서 `schema2_auth.sql`, 이어서 `schema3_admin_code.sql`, `schema4_profile.sql`, `schema5_guest_birth.sql`, `schema6_display.sql`, `schema7_create_rules.sql`, `schema8_meetup_options.sql`, `schema9_nickname.sql`, `schema10_approval.sql`, `schema11_owner.sql`, `schema12_guest_default.sql`, `schema13_phone.sql`, `schema14_host_edit.sql`, `schema15_join_mode.sql`, `schema16_guest_request.sql`, `schema17_admin_request.sql`, `schema18_rules_suggestions.sql`, `schema19_rules_owner.sql`, `schema20_comments_notices.sql`, `schema21_guest_sync.sql` 도 **Run** (3단계 파일 안의 관리자 코드를 먼저 원하는 값으로 바꾸세요)
 3. Supabase → Authentication → Providers → Kakao 켜고 REST API 키와 클라이언트 시크릿 입력
 4. 카카오 개발자 콘솔 → 플랫폼 키 → REST API 키 → 리다이렉트 URI에 `https://<프로젝트>.supabase.co/auth/v1/callback` 등록
 5. 사이트에서 카카오 로그인 → 오른쪽 위 이름 → 내 정보 → **관리자 인증**에 코드 입력
 
 ## 전화번호 로그인
-카카오 계정이 없는 사람은 로그인 창의 "게스트로 참여"에서 이름과 전화번호로 등록합니다. 같은 이름과 번호로 다른 폰에서도 로그인됩니다.
+카카오 계정이 없는 사람은 로그인 창의 "게스트로 참여"에서 이름과 전화번호로 등록합니다. 다시 로그인할 때는 현재 닉네임과 현재 전화번호를 씁니다(바꾸면 바뀐 값으로).
 전화번호 계정은 내 정보의 "카카오 계정 연결"로 카카오를 붙일 수 있습니다(Supabase → Authentication → Settings 의 **Allow manual linking** 을 켜야 함).
 이 기능을 쓰려면 Supabase → Authentication → Providers → Email 에서 **Confirm email 을 꺼야** 합니다.
 
