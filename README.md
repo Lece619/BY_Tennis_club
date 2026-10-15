@@ -1,6 +1,6 @@
 # BY 테니스 클럽 사이트
 
-달력에서 정기 모임과 번개를 만들고, 참가 신청과 복식 대진표, 결과 기록까지 되는 한 장짜리 웹 페이지입니다.
+달력에서 정기 모임과 자유 모임을 만들고, 참가 신청과 복식 대진표, 결과 기록까지 되는 한 장짜리 웹 페이지입니다.
 
 ## 구성
 - `index.html` : 페이지 전체 (화면 + 동작). 상단 `CLUB_NAME` 에서 모임 이름을 바꿀 수 있습니다.
@@ -10,10 +10,11 @@
 - `schema4_profile.sql` : 회원 프로필 항목(구력·성별) SQL (4단계)
 - `schema5_guest_birth.sql` : 생년 + 게스트 등록 SQL (5단계)
 - `schema6_display.sql` : 이름 표시 방식 설정 SQL (6단계)
+- `schema7_create_rules.sql` : 모임 생성 규칙 SQL (7단계)
 
 ## 처음 한 번 할 일
 1. Supabase 대시보드 → 왼쪽 메뉴 **SQL Editor** → `schema.sql` 내용을 붙여넣고 **Run**
-2. 같은 곳에서 `schema2_auth.sql`, 이어서 `schema3_admin_code.sql`, `schema4_profile.sql`, `schema5_guest_birth.sql`, `schema6_display.sql` 도 **Run** (3단계 파일 안의 관리자 코드를 먼저 원하는 값으로 바꾸세요)
+2. 같은 곳에서 `schema2_auth.sql`, 이어서 `schema3_admin_code.sql`, `schema4_profile.sql`, `schema5_guest_birth.sql`, `schema6_display.sql`, `schema7_create_rules.sql` 도 **Run** (3단계 파일 안의 관리자 코드를 먼저 원하는 값으로 바꾸세요)
 3. Supabase → Authentication → Providers → Kakao 켜고 REST API 키와 클라이언트 시크릿 입력
 4. 카카오 개발자 콘솔 → 플랫폼 키 → REST API 키 → 리다이렉트 URI에 `https://<프로젝트>.supabase.co/auth/v1/callback` 등록
 5. 사이트에서 카카오 로그인 → 오른쪽 위 이름 → 내 정보 → **관리자 인증**에 코드 입력
@@ -24,7 +25,9 @@
 
 ## 권한
 - 로그인 없이: 일정과 참가자, 대진표 보기
-- 로그인 회원: 모임 만들기, 참가 신청과 취소, 내 이름 수정
+- 게스트: 참가 신청과 취소, 내 정보 수정 (모임 만들기는 불가)
+- 회원: 자유 모임 만들기, 참가 신청과 취소, 내 정보 수정
+- 정기 모임 만들기: 관리자만
 - 모임 주최자: 자기 모임 삭제, 참가자 빼기, 대진 생성, 점수 입력
 - 관리자: 모든 모임에 주최자 권한 + 홈의 회원 관리에서 관리자 지정·해제, 관리자 코드 변경, 이름 표시 방식(닉네임 / 나이 / 구력) 설정
 

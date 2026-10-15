@@ -254,7 +254,7 @@
       </div>
       <div class="cal" id="calGrid"></div>
       <div class="row" style="margin-top:10px">
-        <span class="legend muted"><span><i style="background:var(--regular)"></i>정기</span><span><i style="background:var(--flash)"></i>번개</span></span>
+        <span class="legend muted" id="legend"></span>
         <button class="ghost" onclick="goToday()">오늘</button>
       </div>
     </div>
@@ -301,9 +301,10 @@
   <div class="sheet">
     <div class="row"><strong>모임 만들기</strong><button class="icon" onclick="closeCreate()">&times;</button></div>
     <label>종류</label>
-    <select id="fKind"><option value="flash">번개</option><option value="regular">정기 모임</option></select>
+    <select id="fKind"></select>
+    <div class="muted" id="kindHint"></div>
     <label>제목</label>
-    <input id="fTitle" placeholder="예: 토요일 아침 번개">
+    <input id="fTitle" placeholder="예: 토요일 아침 모임">
     <div class="two">
       <div><label>날짜</label><input id="fDate" type="date"></div>
       <div><label>시작 시간</label><input id="fTime" type="time" value="10:00"></div>
@@ -411,6 +412,8 @@ const pad = n => String(n).padStart(2,'0');
 const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const todayStr = ymd(new Date());
 const DOW = ['일','월','화','수','목','금','토'];
+const KIND   = { regular: '정기 모임', flash: '자유 모임' };   // 모임 종류 이름. 여기만 바꾸면 전체 적용
+const KINDS  = { regular: '정기',      flash: '자유' };        // 배지용 짧은 이름
 const EXP    = { '0-1':'1년 미만', '1-3':'1~3년', '3-5':'3~5년', '5+':'5년 이상' };
 const GENDER = { m:'남', f:'여' };
 const https  = u => u ? String(u).replace(/^http:\/\//, 'https://') : '';
@@ -635,6 +638,7 @@ function goToday(){ const t=new Date(); state.year=t.getFullYear(); state.month=
 
 function renderCalendar(){
   $('monthLabel').textContent = `${state.year}년 ${state.month+1}월`;
+  $('legend').innerHTML = `<span><i style="background:var(--regular)"></i>${KINDS.regular}</span><span><i style="background:var(--flash)"></i>${KINDS.flash}</span>`;
   const grid = $('calGrid'); grid.innerHTML = '';
   DOW.forEach(d => { const e=document.createElement('div'); e.className='dow'; e.textContent=d; grid.appendChild(e); });
   const first = new Date(state.year, state.month, 1);
@@ -668,13 +672,20 @@ function renderDayList(){
   if (!list.length){ box.innerHTML = '<div class="empty">이 날은 모임이 없어요</div>'; return; }
   box.innerHTML = list.map(m => `
     <div class="item" onclick="openDetail('${m.id}')">
-      <div class="title"><span class="badge ${m.kind}">${m.kind==='regular'?'정기':'번개'}</span>${esc(m.title)}</div>
+      <div class="title"><span class="badge ${m.kind}">${KINDS[m.kind]||''}</span>${esc(m.title)}</div>
       <div class="muted">${fmtTime(m.start_time)} · ${esc(m.location||'장소 미정')} · ${m.participants?.[0]?.count||0}/${m.capacity}명</div>
     </div>`).join('');
 }
 
 // ===== 모임 생성 =====
-function openCreate(){ if(!requireLogin(openCreate)) return; $('fDate').value = state.selected; $('createModal').classList.add('open'); $('fTitle').focus(); }
+function openCreate(){
+  if(!requireLogin(openCreate)) return;
+  if (state.user.is_guest) return toast('모임 만들기는 회원만 할 수 있어요');
+  const kinds = isAdmin() ? ['flash','regular'] : ['flash'];
+  $('fKind').innerHTML = kinds.map(k => `<option value="${k}">${KIND[k]}</option>`).join('');
+  $('kindHint').textContent = isAdmin() ? '' : `${KIND.regular}은 관리자만 만들 수 있어요.`;
+  $('fDate').value = state.selected; $('createModal').classList.add('open'); $('fTitle').focus();
+}
 function closeCreate(){ $('createModal').classList.remove('open'); }
 async function submitCreate(){
   const row = {
@@ -684,6 +695,7 @@ async function submitCreate(){
     note: $('fNote').value.trim() || null, created_by: state.user.name, created_by_id: myId()
   };
   if (!row.title || !row.date) return toast('제목과 날짜를 입력하세요');
+  if (row.kind === 'regular' && !isAdmin()) return toast(`${KIND.regular}은 관리자만 만들 수 있어요`);
   const { data, error } = await db.from('meetups').insert(row).select().single();
   if (error) return showError(error);
   await db.from('participants').insert({ meetup_id: data.id, user_id: myId(), name: state.user.name }); // 만든 사람 자동 참가
@@ -734,7 +746,7 @@ async function loadHome(){
         <div class="sub">${fmtDate(next.date)} ${fmtTime(next.start_time)} · ${esc(next.location||'장소 미정')}</div>
         <span class="cnt">${next.participants.length}/${next.capacity}명 참가${next.participants.some(p=>p.user_id===myId())?' · 참가중':''}</span>
       </div>`
-    : `<div class="next empty"><div class="ttl">예정된 모임이 없어요</div><div class="sub">번개를 만들어 사람들을 모아 보세요</div></div>`);
+    : `<div class="next empty"><div class="ttl">예정된 모임이 없어요</div><div class="sub">모임을 만들어 사람들을 모아 보세요</div></div>`);
   $('tiles').innerHTML = `
     <div class="tile"><b>${month.count ?? 0}</b><span>이번 달 모임</span></div>
     <div class="tile"><b>${ups.length}</b><span>2주 내 모임</span></div>
@@ -744,14 +756,14 @@ async function loadHome(){
     const joined = m.participants.some(p=>p.user_id===myId());
     return `<div class="up" onclick="openDetail('${m.id}')">
       <div class="d"><b>${+d}</b><small>${+mo}월 ${dow}</small></div>
-      <div class="t"><div class="title"><span class="badge ${m.kind}">${m.kind==='regular'?'정기':'번개'}</span>${esc(m.title)}</div>
+      <div class="t"><div class="title"><span class="badge ${m.kind}">${KINDS[m.kind]||''}</span>${esc(m.title)}</div>
         <div class="muted">${fmtTime(m.start_time)} · ${esc(m.location||'장소 미정')} · ${m.participants.length}/${m.capacity}명</div></div>
       ${joined?'<span class="joined">참가중</span>':''}
     </div>`; }).join('') : '<div class="empty"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><div>앞으로 2주 안에 예정된 모임이 없어요</div></div>';
   const pasts = past.data || [];
   $('recent').innerHTML = pasts.length ? pasts.map(m => `
     <div class="item" onclick="openDetail('${m.id}')">
-      <div class="title"><span class="badge ${m.kind}">${m.kind==='regular'?'정기':'번개'}</span>${esc(m.title)}</div>
+      <div class="title"><span class="badge ${m.kind}">${KINDS[m.kind]||''}</span>${esc(m.title)}</div>
       <div class="muted">${fmtDate(m.date)} · ${esc(m.location||'')} · ${m.participants?.[0]?.count||0}명 참가</div>
     </div>`).join('') : '<div class="empty">아직 지난 모임이 없어요</div>';
   const sv = localStorage.getItem('startView') || 'home';
@@ -776,7 +788,7 @@ async function openDetail(id){
 function renderDetail(){
   const m = state.current;
   $('detailInfo').innerHTML = `
-    <div class="dhead"><div><span class="badge ${m.kind}">${m.kind==='regular'?'정기':'번개'}</span><div class="dtitle">${esc(m.title)}</div></div><span class="dday">${dday(m.date)}</span></div>
+    <div class="dhead"><div><span class="badge ${m.kind}">${KINDS[m.kind]||''}</span><div class="dtitle">${esc(m.title)}</div></div><span class="dday">${dday(m.date)}</span></div>
     <div class="info">
       <div><span>일시</span><b>${fmtDate(m.date)} ${fmtTime(m.start_time)}</b></div>
       <div><span>장소</span><b>${esc(m.location||'미정')}</b></div>
