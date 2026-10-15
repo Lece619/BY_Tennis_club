@@ -23,7 +23,18 @@
   header{background:linear-gradient(135deg,#c8161f,#8e0f16);box-shadow:0 2px 10px rgba(120,0,10,.25);color:#fff;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:8px}
   header h1{margin:0;font-size:18px;cursor:pointer;display:flex;align-items:center;gap:10px}
   header h1 img{width:40px;height:40px;border-radius:50%;background:#fff;object-fit:cover}
-  .chip{background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+  .chip{background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;max-width:150px}
+  .chip img{width:22px;height:22px;border-radius:50%;margin-right:6px;object-fit:cover;background:#fff;flex:none}
+  .chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .avatar-lg{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#eee;flex:none}
+  button.kakao{width:100%;background:#FEE500;color:#191919;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;margin-top:12px}
+  .person .x{margin-left:6px;cursor:pointer;opacity:.55;font-weight:700}
+  .person .x:hover{opacity:1}
+  .member{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+  .member:first-child{border-top:none}
+  .member img{width:32px;height:32px;border-radius:50%;object-fit:cover;background:#eee;flex:none}
+  .member .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .adminBadge{font-size:11px;background:#fff3cd;color:#6b4e00;border-radius:4px;padding:2px 6px;margin-left:4px;vertical-align:middle;font-weight:600}
   main{max-width:720px;margin:0 auto;padding:16px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(42,29,30,.05)}
   .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -54,6 +65,10 @@
   .item:first-of-type{border-top:none}
   .item .title{font-weight:600;font-size:15px}
   .item:active{opacity:.7}
+  .info{margin-top:10px;display:grid;gap:6px}
+  .info>div{display:grid;grid-template-columns:44px 1fr;gap:8px;align-items:start}
+  .info span{color:var(--muted);font-size:13px;padding-top:1px}
+  .info b{font-weight:600}
   /* participants */
   .people{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
   .person{background:var(--accent-soft);color:#8e0f16;border-radius:999px;padding:5px 11px;font-size:13px;font-weight:500}
@@ -125,7 +140,7 @@
 <header>
   <h1 onclick="showView('home')"><img src="icon-192.png" alt="" onerror="this.remove()"><span id="clubName">BY 테니스 클럽</span></h1>
   <div>
-    <button class="chip" id="nameChip" onclick="askName(true)">이름 설정</button>
+    <button class="chip" id="userChip" onclick="openProfile()"><span>로그인</span></button>
   </div>
 </header>
 <nav class="tabs" id="tabs">
@@ -148,9 +163,14 @@
       <strong>지난 모임</strong>
       <div id="recent" style="margin-top:6px"></div>
     </div>
+    <div class="card hidden" id="adminCard">
+      <strong>회원 관리 <span class="adminBadge">운영진</span></strong>
+      <div class="muted">운영진 지정과 해제를 할 수 있습니다.</div>
+      <div id="members" style="margin-top:6px"></div>
+    </div>
     <div class="card">
       <div class="row">
-        <div><strong>앱을 열 때 첫 화면</strong><div class="muted">이 폰에만 저장됩니다</div></div>
+        <div><strong style="font-size:14px">앱을 열 때 첫 화면</strong></div>
         <div class="seg" id="startSeg">
           <button data-v="home" onclick="setStartView('home')">홈</button>
           <button data-v="calendar" onclick="setStartView('calendar')">달력</button>
@@ -187,9 +207,9 @@
     <button class="ghost" onclick="showView(state.prevView)" style="margin-bottom:10px">&lsaquo; 뒤로</button>
     <div class="card" id="detailInfo"></div>
     <div class="card">
-      <div class="row"><strong>참가자 <span id="pCount" class="muted"></span></strong>
-        <button class="primary" id="joinBtn" onclick="toggleJoin()">참가</button></div>
+      <strong>참가자 <span id="pCount" class="muted"></span></strong>
       <div class="people" id="people"></div>
+      <button class="primary" id="joinBtn" style="width:100%;margin-top:4px" onclick="toggleJoin()">참가</button>
     </div>
     <div class="card">
       <div class="row"><strong>대진표</strong>
@@ -238,15 +258,30 @@
   </div>
 </div>
 
-<!-- 이름 입력 -->
-<div class="modal" id="nameModal">
+<!-- 로그인 -->
+<div class="modal" id="loginModal" onclick="if(event.target===this)closeLogin()">
+  <div class="sheet" style="text-align:center">
+    <img src="icon-192.png" alt="" style="width:72px;height:72px;border-radius:50%">
+    <div style="font-weight:700;font-size:17px;margin-top:8px">로그인이 필요합니다</div>
+    <p class="muted" style="margin:6px 0 0">모임 만들기와 참가 신청은 로그인 후 이용할 수 있습니다.<br>모임 일정은 로그인 없이도 볼 수 있습니다.</p>
+    <button class="kakao" onclick="loginKakao()">카카오로 로그인</button>
+    <div style="margin-top:10px"><button class="ghost" onclick="closeLogin()">나중에</button></div>
+  </div>
+</div>
+
+<!-- 내 정보 -->
+<div class="modal" id="profileModal" onclick="if(event.target===this)closeProfile()">
   <div class="sheet">
-    <strong>이름을 알려 주세요</strong>
-    <p class="muted" style="margin:6px 0 0">참가 신청과 모임 만들기에 표시되는 이름입니다. 이 폰에 저장됩니다.</p>
-    <input id="fName" placeholder="예: 홍길동" maxlength="20" style="margin-top:12px" onkeydown="if(event.key==='Enter')saveName()">
-    <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
-      <button class="ghost" id="nameCancel" onclick="closeName()">취소</button>
-      <button class="primary" onclick="saveName()">저장</button>
+    <div class="row"><strong>내 정보</strong><button class="icon" onclick="closeProfile()">&times;</button></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
+      <img id="pAvatar" class="avatar-lg" src="" alt="" onerror="this.style.visibility='hidden'">
+      <div><div id="pName" style="font-weight:700;font-size:16px"></div><div id="pRole" class="muted"></div></div>
+    </div>
+    <label>표시 이름</label>
+    <input id="fName" maxlength="20" placeholder="모임에서 쓸 이름" onkeydown="if(event.key==='Enter')saveProfile()">
+    <div style="margin-top:14px;display:flex;gap:8px;justify-content:space-between">
+      <button class="danger" onclick="logout()">로그아웃</button>
+      <button class="primary" onclick="saveProfile()">저장</button>
     </div>
   </div>
 </div>
@@ -278,7 +313,7 @@ const state = {
   meetups: [],                    // 이번 달 모임
   current: null,                  // 상세 보고 있는 모임
   view: 'home', prevView: 'home',  // 현재 화면, 상세에서 돌아갈 화면
-  myName: localStorage.getItem('myName') || ''
+  user: null                      // 로그인한 회원 프로필 {id, name, avatar_url, role}
 };
 
 function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
@@ -286,35 +321,100 @@ function showError(e){
   console.error(e);
   const msg = (e && e.message) || String(e);
   if (/schema cache|does not exist|relation/.test(msg)) {
-    $('banner').innerHTML = '테이블이 아직 없습니다. Supabase 대시보드 → SQL Editor 에서 <code>schema.sql</code> 내용을 실행해 주세요.';
+    $('banner').innerHTML = '데이터베이스 준비가 안 됐습니다. Supabase → SQL Editor 에서 <code>schema.sql</code> 과 <code>schema2_auth.sql</code> 을 실행해 주세요.';
     $('banner').classList.remove('hidden');
+  } else if (/row-level security|violates|permission denied|JWT/.test(msg)) {
+    toast(state.user ? '권한이 없습니다' : '로그인이 필요합니다');
   } else toast('오류: ' + msg);
 }
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function fmtDate(s){ const [y,m,d]=s.split('-'); const dt=new Date(+y,m-1,+d); return `${+m}월 ${+d}일 (${DOW[dt.getDay()]})`; }
 function fmtTime(t){ return t ? t.slice(0,5) : ''; }
 
-// ===== 이름 =====
-function renderName(){ $('nameChip').textContent = state.myName ? state.myName : '이름 설정'; }
-let afterName = null;   // 이름 저장 뒤 이어서 할 동작
-function askName(force, next){
-  if (state.myName && !force) return true;
-  afterName = next || null;
-  $('fName').value = state.myName || '';
-  $('nameCancel').classList.toggle('hidden', !state.myName);   // 처음엔 취소 불가
-  $('nameModal').classList.add('open');
-  setTimeout(()=>$('fName').focus(), 50);
+// ===== 로그인 / 회원 =====
+const isAdmin   = () => !!state.user && state.user.role === 'admin';
+const canManage = m  => !!state.user && (isAdmin() || m.created_by_id === state.user.id);   // 운영진 또는 모임 주최자
+const myId      = () => state.user ? state.user.id : null;
+
+async function initAuth(){
+  const { data: { session } } = await db.auth.getSession();
+  await setUser(session ? session.user : null);
+  if (location.hash.includes('access_token') || location.search.includes('code=')) history.replaceState(null, '', location.pathname);
+  db.auth.onAuthStateChange((event, s) => {
+    const uid = s ? s.user.id : null;
+    if (uid === myId()) return;                     // 같은 사용자면 무시
+    setUser(s ? s.user : null).then(refreshView);
+  });
+}
+async function setUser(u){
+  if (!u){ state.user = null; renderUser(); return; }
+  const { data } = await db.from('profiles').select('*').eq('id', u.id).maybeSingle();
+  const meta = u.user_metadata || {};
+  state.user = data || { id: u.id, role: 'member',
+    name: meta.name || meta.full_name || meta.preferred_username || '회원',
+    avatar_url: meta.avatar_url || meta.picture || null };
+  renderUser();
+}
+function renderUser(){
+  const u = state.user;
+  $('userChip').innerHTML = u
+    ? `${u.avatar_url ? `<img src="${esc(u.avatar_url)}" alt="">` : ''}<span>${esc(u.name)}</span>`
+    : '<span>카카오 로그인</span>';
+}
+function refreshView(){
+  if (state.view === 'detail' && state.current) openDetail(state.current.id);
+  else showView(state.view);
+}
+let afterLogin = null;
+function requireLogin(next){
+  if (state.user) return true;
+  afterLogin = next || null;
+  $('loginModal').classList.add('open');
   return false;
 }
-function closeName(){ $('nameModal').classList.remove('open'); afterName=null; }
-function saveName(){
+function closeLogin(){ $('loginModal').classList.remove('open'); afterLogin = null; }
+async function loginKakao(){
+  const { error } = await db.auth.signInWithOAuth({ provider: 'kakao', options: { redirectTo: location.origin + location.pathname } });
+  if (error) showError(error);
+}
+async function logout(){
+  closeProfile();
+  const { error } = await db.auth.signOut();
+  if (error) return showError(error);
+  toast('로그아웃했습니다');
+}
+function openProfile(){
+  if (!requireLogin()) return;
+  const u = state.user;
+  $('pAvatar').src = u.avatar_url || ''; $('pAvatar').style.visibility = u.avatar_url ? 'visible' : 'hidden';
+  $('pName').textContent = u.name;
+  $('pRole').textContent = isAdmin() ? '운영진' : '회원';
+  $('fName').value = u.name;
+  $('profileModal').classList.add('open');
+}
+function closeProfile(){ $('profileModal').classList.remove('open'); }
+async function saveProfile(){
   const n = $('fName').value.trim();
   if (!n) return toast('이름을 입력하세요');
-  state.myName = n; localStorage.setItem('myName', n); renderName();
-  $('nameModal').classList.remove('open');
-  if (state.current) renderDetail();
-  const next = afterName; afterName = null;
-  if (next) next();
+  const { error } = await db.from('profiles').update({ name: n }).eq('id', myId());
+  if (error) return showError(error);
+  state.user.name = n; renderUser(); closeProfile(); toast('저장했습니다'); refreshView();
+}
+async function loadMembers(){
+  const { data, error } = await db.from('profiles').select('*').order('created_at');
+  if (error) return showError(error);
+  $('members').innerHTML = data.map(p => `
+    <div class="member">
+      ${p.avatar_url ? `<img src="${esc(p.avatar_url)}" alt="">` : '<img alt="">'}
+      <div class="nm">${esc(p.name)}${p.role==='admin' ? '<span class="adminBadge">운영진</span>' : ''}</div>
+      ${p.id === myId() ? '<span class="muted">나</span>' :
+        `<button class="ghost" style="min-height:32px;padding:4px 10px" onclick="setRole('${p.id}','${p.role==='admin'?'member':'admin'}')">${p.role==='admin'?'운영진 해제':'운영진 지정'}</button>`}
+    </div>`).join('') || '<p class="muted">회원이 없습니다.</p>';
+}
+async function setRole(id, role){
+  const { error } = await db.from('profiles').update({ role }).eq('id', id);
+  if (error) return showError(error);
+  toast(role==='admin' ? '운영진으로 지정했습니다' : '운영진을 해제했습니다'); loadMembers();
 }
 
 // ===== 달력 =====
@@ -373,19 +473,19 @@ function renderDayList(){
 }
 
 // ===== 모임 생성 =====
-function openCreate(){ if(!askName(false, openCreate)) return; $('fDate').value = state.selected; $('createModal').classList.add('open'); $('fTitle').focus(); }
+function openCreate(){ if(!requireLogin(openCreate)) return; $('fDate').value = state.selected; $('createModal').classList.add('open'); $('fTitle').focus(); }
 function closeCreate(){ $('createModal').classList.remove('open'); }
 async function submitCreate(){
   const row = {
     kind: $('fKind').value, title: $('fTitle').value.trim(), date: $('fDate').value,
     start_time: $('fTime').value || null, location: $('fLocation').value.trim() || null,
     courts: +$('fCourts').value || 1, capacity: +$('fCapacity').value || 8,
-    note: $('fNote').value.trim() || null, created_by: state.myName
+    note: $('fNote').value.trim() || null, created_by: state.user.name, created_by_id: myId()
   };
   if (!row.title || !row.date) return toast('제목과 날짜를 입력하세요');
   const { data, error } = await db.from('meetups').insert(row).select().single();
   if (error) return showError(error);
-  await db.from('participants').insert({ meetup_id: data.id, name: state.myName }); // 만든 사람 자동 참가
+  await db.from('participants').insert({ meetup_id: data.id, user_id: myId(), name: state.user.name }); // 만든 사람 자동 참가
   closeCreate(); $('fTitle').value=''; $('fLocation').value=''; $('fNote').value='';
   state.selected = row.date;
   const [y,m] = row.date.split('-'); state.year=+y; state.month=m-1;
@@ -417,21 +517,21 @@ async function loadHome(){
   const t = new Date(); const in14 = new Date(); in14.setDate(t.getDate()+14);
   const mFirst = new Date(t.getFullYear(), t.getMonth(), 1), mLast = new Date(t.getFullYear(), t.getMonth()+1, 0);
   const [up, past, month] = await Promise.all([
-    db.from('meetups').select('*, participants(name)').gte('date', todayStr).lte('date', ymd(in14)).order('date').order('start_time'),
+    db.from('meetups').select('*, participants(name,user_id)').gte('date', todayStr).lte('date', ymd(in14)).order('date').order('start_time'),
     db.from('meetups').select('*, participants(count)').lt('date', todayStr).order('date', {ascending:false}).limit(3),
     db.from('meetups').select('id', {count:'exact', head:true}).gte('date', ymd(mFirst)).lte('date', ymd(mLast))
   ]);
   const err = up.error || past.error || month.error;
   if (err) showError(err); else $('banner').classList.add('hidden');
   const ups = up.data || [];
-  const mine = ups.filter(m => m.participants.some(p=>p.name===state.myName));
+  const mine = ups.filter(m => m.participants.some(p=>p.user_id===myId()));
   $('tiles').innerHTML = `
     <div class="tile"><b>${month.count ?? 0}</b><span>이번 달 모임</span></div>
     <div class="tile"><b>${ups.length}</b><span>2주 내 모임</span></div>
     <div class="tile"><b>${mine.length}</b><span>내 참가 예정</span></div>`;
   $('upcoming').innerHTML = ups.length ? ups.map(m => {
     const [,mo,d] = m.date.split('-'); const dow = DOW[new Date(m.date+'T00:00').getDay()];
-    const joined = m.participants.some(p=>p.name===state.myName);
+    const joined = m.participants.some(p=>p.user_id===myId());
     return `<div class="up" onclick="openDetail('${m.id}')">
       <div class="d"><b>${+d}</b><small>${+mo}월 ${dow}</small></div>
       <div class="t"><div class="title"><span class="badge ${m.kind}">${m.kind==='regular'?'정기':'번개'}</span>${esc(m.title)}</div>
@@ -446,6 +546,8 @@ async function loadHome(){
     </div>`).join('') : '<p class="muted">아직 지난 모임이 없습니다.</p>';
   const sv = localStorage.getItem('startView') || 'home';
   document.querySelectorAll('#startSeg button').forEach(b => b.classList.toggle('active', b.dataset.v===sv));
+  $('adminCard').classList.toggle('hidden', !isAdmin());
+  if (isAdmin()) loadMembers();
 }
 
 // ===== 상세 =====
@@ -462,37 +564,50 @@ function renderDetail(){
   const m = state.current;
   $('detailInfo').innerHTML = `
     <div style="font-size:18px;font-weight:700"><span class="badge ${m.kind}">${m.kind==='regular'?'정기':'번개'}</span>${esc(m.title)}</div>
-    <div style="margin-top:6px">📅 ${fmtDate(m.date)} ${fmtTime(m.start_time)}</div>
-    <div>📍 ${esc(m.location||'장소 미정')}</div>
-    <div>🎾 코트 ${m.courts}면 · 정원 ${m.capacity}명</div>
-    ${m.note?`<div style="margin-top:6px;white-space:pre-wrap">${esc(m.note)}</div>`:''}
-    <div class="muted" style="margin-top:6px">만든 사람: ${esc(m.created_by||'-')}</div>`;
+    <div class="info">
+      <div><span>일시</span><b>${fmtDate(m.date)} ${fmtTime(m.start_time)}</b></div>
+      <div><span>장소</span><b>${esc(m.location||'미정')}</b></div>
+      <div><span>코트</span><b>${m.courts}면 · 정원 ${m.capacity}명</b></div>
+      <div><span>주최</span><b>${esc(m.created_by||'-')}</b></div>
+      ${m.note?`<div><span>메모</span><b style="white-space:pre-wrap;font-weight:400">${esc(m.note)}</b></div>`:''}
+    </div>`;
   const names = m.participants.map(p=>p.name);
+  const manage = canManage(m);
   $('pCount').textContent = `${names.length}/${m.capacity}`;
-  $('people').innerHTML = names.length
-    ? names.map(n=>`<span class="person ${n===state.myName?'me':''}">${esc(n)}</span>`).join('')
+  $('people').innerHTML = m.participants.length
+    ? m.participants.map(p=>`<span class="person ${p.user_id===myId()?'me':''}">${esc(p.name)}${manage && p.user_id!==myId() ? `<span class="x" title="참가 취소시키기" onclick="removeParticipant('${p.id}','${esc(p.name)}')">&times;</span>` : ''}</span>`).join('')
     : '<span class="muted">아직 없음</span>';
-  const joined = names.includes(state.myName);
+  const joined = m.participants.some(p=>p.user_id===myId());
   $('joinBtn').textContent = joined ? '참가 취소' : '참가';
   $('joinBtn').className = joined ? 'ghost' : 'primary';
   $('joinBtn').disabled = !joined && names.length >= m.capacity;
-  $('deleteBtn').classList.toggle('hidden', m.created_by !== state.myName);
+  $('deleteBtn').classList.toggle('hidden', !manage);
+  $('genBtn').classList.toggle('hidden', !manage);
+  $('rounds').classList.toggle('hidden', !manage);
   $('genBtn').disabled = names.length < 4;
-  $('bracketHint').textContent = names.length < 4
-    ? '참가자가 4명 이상이면 복식 대진을 만들 수 있습니다.'
-    : (m.matches.length ? '점수를 입력하면 자동 저장됩니다. 다시 생성하면 기존 대진은 지워집니다.' : '라운드 수를 고르고 대진 생성을 누르세요.');
+  $('bracketHint').textContent = !manage
+    ? (m.matches.length ? '점수는 주최자와 운영진이 입력합니다.' : '대진표는 주최자나 운영진이 만들면 여기에 표시됩니다.')
+    : names.length < 4
+      ? '참가자가 4명 이상이면 복식 대진을 만들 수 있습니다.'
+      : (m.matches.length ? '점수를 입력하면 자동 저장됩니다. 다시 생성하면 기존 대진은 지워집니다.' : '라운드 수를 고르고 대진 생성을 누르세요.');
   renderBracket();
 }
 async function toggleJoin(){
-  if(!askName(false, toggleJoin)) return;
+  if(!requireLogin(toggleJoin)) return;
   const m = state.current;
-  const mine = m.participants.find(p=>p.name===state.myName);
+  const mine = m.participants.find(p=>p.user_id===myId());
   const { error } = mine
     ? await db.from('participants').delete().eq('id', mine.id)
-    : await db.from('participants').insert({ meetup_id: m.id, name: state.myName });
+    : await db.from('participants').insert({ meetup_id: m.id, user_id: myId(), name: state.user.name });
   if (error) return showError(error);
   toast(mine ? '참가를 취소했습니다' : '참가했습니다');
   openDetail(m.id);
+}
+async function removeParticipant(id, name){
+  if (!confirm(`${name} 님을 참가 명단에서 뺄까요?`)) return;
+  const { error } = await db.from('participants').delete().eq('id', id);
+  if (error) return showError(error);
+  toast('명단에서 뺐습니다'); openDetail(state.current.id);
 }
 async function deleteMeetup(){
   if (!confirm('이 모임을 삭제할까요? 참가자와 대진도 함께 지워집니다.')) return;
@@ -547,6 +662,7 @@ function renderBracket(){
   const box = $('bracket'); box.innerHTML = '';
   if (!m.matches.length){ $('standings').innerHTML=''; return; }
   const players = m.participants.map(p=>p.name);
+  const dis = canManage(m) ? '' : 'disabled';
   const rounds = [...new Set(m.matches.map(x=>x.round))];
   rounds.forEach(r=>{
     const ms = m.matches.filter(x=>x.round===r);
@@ -557,9 +673,9 @@ function renderBracket(){
       <div class="match ${x.score_a!=null&&x.score_b!=null?'done':''}">
         <div class="team">${x.team_a.map(esc).join(' · ')}</div>
         <div class="score">
-          <input type="number" min="0" value="${x.score_a??''}" onchange="saveScore('${x.id}','score_a',this.value)">
+          <input type="number" min="0" value="${x.score_a??''}" ${dis} onchange="saveScore('${x.id}','score_a',this.value)">
           <span>:</span>
-          <input type="number" min="0" value="${x.score_b??''}" onchange="saveScore('${x.id}','score_b',this.value)">
+          <input type="number" min="0" value="${x.score_b??''}" ${dis} onchange="saveScore('${x.id}','score_b',this.value)">
         </div>
         <div class="team">${x.team_b.map(esc).join(' · ')}</div>
         <div class="muted" style="grid-column:1/-1;text-align:center;font-size:11px">${x.court}번 코트</div>
@@ -593,8 +709,7 @@ function renderStandings(){
 }
 
 // ===== 시작 =====
-renderName();
-showView(localStorage.getItem('startView') || 'home');
+initAuth().then(() => showView(localStorage.getItem('startView') || 'home'));
 </script>
 </body>
 </html>

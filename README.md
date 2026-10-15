@@ -4,11 +4,21 @@
 
 ## 구성
 - `index.html` : 페이지 전체 (화면 + 동작). 상단 `CLUB_NAME` 에서 모임 이름을 바꿀 수 있습니다.
-- `schema.sql` : Supabase 테이블 생성 SQL
+- `schema.sql` : Supabase 테이블 생성 SQL (1단계)
+- `schema2_auth.sql` : 카카오 로그인 + 운영진 권한 SQL (2단계)
 
 ## 처음 한 번 할 일
 1. Supabase 대시보드 → 왼쪽 메뉴 **SQL Editor** → `schema.sql` 내용을 붙여넣고 **Run**
-2. `index.html` 을 브라우저로 열어서 동작 확인
+2. 같은 곳에서 `schema2_auth.sql` 도 **Run**
+3. Supabase → Authentication → Providers → Kakao 켜고 REST API 키와 클라이언트 시크릿 입력
+4. 카카오 개발자 콘솔 → 플랫폼 키 → REST API 키 → 리다이렉트 URI에 `https://<프로젝트>.supabase.co/auth/v1/callback` 등록
+5. 사이트에서 카카오 로그인. **처음 로그인한 사람이 자동으로 운영진**이 됩니다.
+
+## 권한
+- 로그인 없이: 일정과 참가자, 대진표 보기
+- 로그인 회원: 모임 만들기, 참가 신청과 취소, 내 이름 수정
+- 모임 주최자: 자기 모임 삭제, 참가자 빼기, 대진 생성, 점수 입력
+- 운영진: 모든 모임에 주최자 권한 + 홈의 회원 관리에서 운영진 지정과 해제
 
 ## 공개 주소로 올리기 (GitHub Pages)
 1. GitHub 에서 새 저장소 생성 (예: `tennis`)
@@ -16,6 +26,6 @@
 3. 저장소 Settings → Pages → Branch 를 `main` 으로 선택 → Save
 4. 잠시 뒤 `https://아이디.github.io/tennis/` 로 접속
 
-## 현재 버전의 한계
-- 로그인이 없고 이름만 입력해서 씁니다. 같은 이름을 쓰면 같은 사람으로 취급됩니다.
-- 누구나 모임을 만들고 지울 수 있습니다. 운영진 전용 권한은 다음 단계에서 로그인과 함께 추가합니다.
+## 참고
+- 운영진을 SQL로 직접 지정하려면: `update profiles set role = 'admin' where name = '이름';`
+- Supabase의 service_role 키는 절대 저장소나 페이지에 넣지 마세요.
