@@ -109,6 +109,7 @@
   .cal .day.other{opacity:.3}
   .cal .day .n{font-size:13px;font-weight:600;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%}
   .cal .day.today .n{background:var(--accent);color:#fff}
+  .cal .day.reg{border-color:var(--regular);background:var(--regular-soft)}
   .cal .day.selected{background:#fff;border-color:var(--accent);box-shadow:var(--shadow)}
   .cal .day .n.sun{color:#dc2626} .cal .day.today .n.sun{color:#fff}
   .cal .day .n.sat{color:var(--regular)} .cal .day.today .n.sat{color:#fff}
@@ -206,6 +207,11 @@
     <div class="tiles" id="tiles"></div>
     <div class="card">
       <div class="row"><strong>다가오는 모임</strong><button class="primary" onclick="openCreate()">+ 모임 만들기</button></div>
+      <div class="seg" id="upFilter" style="margin-top:10px">
+        <button data-v="all" onclick="setUpFilter('all')">전체</button>
+        <button data-v="regular" onclick="setUpFilter('regular')">정기</button>
+        <button data-v="flash" onclick="setUpFilter('flash')">자유</button>
+      </div>
       <div id="upcoming" style="margin-top:6px"></div>
     </div>
     <div class="card">
@@ -840,7 +846,7 @@ function goToday(){ const t=new Date(); state.year=t.getFullYear(); state.month=
 
 function renderCalendar(){
   $('monthLabel').textContent = `${state.year}년 ${state.month+1}월`;
-  $('legend').innerHTML = `<span><i style="background:var(--regular)"></i>${KINDS.regular}</span><span><i style="background:var(--flash)"></i>${KINDS.flash}</span>`;
+  $('legend').innerHTML = `<span><i style="background:var(--regular)"></i>${KINDS.regular} <span style="display:inline-block;width:14px;height:12px;border:1.5px solid var(--regular);border-radius:4px;vertical-align:-2px;background:var(--regular-soft)"></span></span><span><i style="background:var(--flash)"></i>${KINDS.flash}</span>`;
   const grid = $('calGrid'); grid.innerHTML = '';
   DOW.forEach(d => { const e=document.createElement('div'); e.className='dow'; e.textContent=d; grid.appendChild(e); });
   const first = new Date(state.year, state.month, 1);
@@ -855,7 +861,9 @@ function renderCalendar(){
     const n = document.createElement('div');
     n.className = 'n' + (d.getDay()===0?' sun':d.getDay()===6?' sat':'');
     n.textContent = d.getDate(); cell.appendChild(n);
-    state.meetups.filter(m=>m.date===s).slice(0,3).forEach(m=>{
+    const dayMs = state.meetups.filter(m=>m.date===s);
+    if (dayMs.some(m=>m.kind==='regular')) cell.classList.add('reg');
+    dayMs.slice(0,3).forEach(m=>{
       const t=document.createElement('div'); t.className='tag '+m.kind; t.textContent=m.title; cell.appendChild(t);
     });
     cell.onclick = () => {
@@ -960,6 +968,22 @@ function showView(name){
   if (name==='admin') loadAdmin();
 }
 function showCalendar(){ showView('calendar'); }
+function setUpFilter(v){ localStorage.setItem('upFilter', v); renderUpcoming(); }
+function renderUpcoming(){
+  const f = localStorage.getItem('upFilter') || 'all';
+  document.querySelectorAll('#upFilter button').forEach(b => b.classList.toggle('active', b.dataset.v === f));
+  const list = (state.ups || []).filter(m => f === 'all' || m.kind === f);
+  $('upcoming').innerHTML = list.length ? list.map(m => {
+    const [,mo,d] = m.date.split('-'); const dow = DOW[new Date(m.date+'T00:00').getDay()];
+    const me = m.participants.find(p=>p.user_id===myId());
+    const joined = !!me && me.status !== 'pending';
+    return `<div class="up" onclick="openDetail('${m.id}')">
+      <div class="d"><b>${+d}</b><small>${+mo}월 ${dow}</small></div>
+      <div class="t"><div class="title"><span class="badge ${m.kind}">${KINDS[m.kind]||''}</span>${esc(m.title)}</div>
+        <div class="muted">${fmtTime(m.start_time)} · ${esc(m.location||'장소 미정')} · ${cnt(apCount(m), m.capacity)}</div></div>
+      ${joined?'<span class="joined">참가중</span>':(me?'<span class="joined" style="background:#fef3c7;color:#92400e">신청 중</span>':'')}
+    </div>`; }).join('') : `<div class="empty"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><div>${f==='all' ? '앞으로 2주 안에 예정된 모임이 없어요' : `2주 안에 예정된 ${KIND[f]}이 없어요`}</div></div>`;
+}
 function openLink(i){
   const l = LINKS[i]; if (!l) return;
   if (!confirm(`${l.name} 사이트로 이동할까요?\n새 탭이 열립니다.`)) return;
@@ -998,16 +1022,7 @@ async function loadHome(){
     <div class="tile"><b>${month.count ?? 0}</b><span>이번 달 모임</span></div>
     <div class="tile"><b>${ups.length}</b><span>2주 내 모임</span></div>
     <div class="tile"><b>${mine.length}</b><span>내 참가 예정</span></div>`;
-  $('upcoming').innerHTML = ups.length ? ups.map(m => {
-    const [,mo,d] = m.date.split('-'); const dow = DOW[new Date(m.date+'T00:00').getDay()];
-    const me = m.participants.find(p=>p.user_id===myId());
-    const joined = !!me && me.status !== 'pending';
-    return `<div class="up" onclick="openDetail('${m.id}')">
-      <div class="d"><b>${+d}</b><small>${+mo}월 ${dow}</small></div>
-      <div class="t"><div class="title"><span class="badge ${m.kind}">${KINDS[m.kind]||''}</span>${esc(m.title)}</div>
-        <div class="muted">${fmtTime(m.start_time)} · ${esc(m.location||'장소 미정')} · ${cnt(apCount(m), m.capacity)}</div></div>
-      ${joined?'<span class="joined">참가중</span>':(me?'<span class="joined" style="background:#fef3c7;color:#92400e">신청 중</span>':'')}
-    </div>`; }).join('') : '<div class="empty"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><div>앞으로 2주 안에 예정된 모임이 없어요</div></div>';
+  state.ups = ups; renderUpcoming();
   const pasts = past.data || [];
   $('recent').innerHTML = pasts.length ? pasts.map(m => `
     <div class="item" onclick="openDetail('${m.id}')">
