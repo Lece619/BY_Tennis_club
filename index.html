@@ -11,149 +11,185 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
 <title>BY 테니스 클럽</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
   :root{
-    --bg:#f6f4f4; --card:#ffffff; --text:#2a1d1e; --muted:#7a6b6c; --line:#e6dddd;
-    --accent:#b3141c; --accent-soft:#fbe9ea; --danger:#7a7a7a; --regular:#3b6fd8; --flash:#e08a1e;
+    --bg:#f3f4f6; --card:#ffffff; --text:#111827; --muted:#6b7280; --line:#e5e7eb; --soft:#f9fafb;
+    --accent:#c0151d; --accent-dark:#8e0f16; --accent-soft:#fdecec; --accent-ink:#8e0f16;
+    --regular:#2563eb; --regular-soft:#e8efff; --flash:#ea8a1f; --flash-soft:#fff2e3;
+    --ok:#16a34a; --danger:#6b7280;
+    --r:16px; --shadow:0 1px 2px rgba(17,24,39,.04),0 4px 14px rgba(17,24,39,.05);
+    --nav-h:62px;
   }
   *{box-sizing:border-box}
   html{-webkit-text-size-adjust:100%}
-  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;background:var(--bg);color:var(--text);line-height:1.45}
-  .top{position:sticky;top:0;z-index:5}
-  header{background:linear-gradient(135deg,#c8161f,#8e0f16);box-shadow:0 2px 10px rgba(120,0,10,.25);color:#fff;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:8px}
-  header h1{margin:0;font-size:18px;cursor:pointer;display:flex;align-items:center;gap:10px}
-  header h1 img{width:40px;height:40px;border-radius:50%;background:#fff;object-fit:cover}
-  .chip{background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;max-width:150px}
-  .chip img{width:22px;height:22px;border-radius:50%;margin-right:6px;object-fit:cover;background:#fff;flex:none}
-  .chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .avatar-lg{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#eee;flex:none}
-  button.kakao{width:100%;background:#FEE500;color:#191919;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;margin-top:12px}
-  .person .x{margin-left:6px;cursor:pointer;opacity:.55;font-weight:700}
-  .person .x:hover{opacity:1}
-  .member{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
-  .member:first-child{border-top:none}
-  .member img{width:32px;height:32px;border-radius:50%;object-fit:cover;background:#eee;flex:none}
-  .member .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .adminBadge{font-size:11px;background:#fff3cd;color:#6b4e00;border-radius:4px;padding:2px 6px;margin-left:4px;vertical-align:middle;font-weight:600}
-  main{max-width:720px;margin:0 auto;padding:16px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(42,29,30,.05)}
+  body{margin:0;font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;background:var(--bg);color:var(--text);line-height:1.5;letter-spacing:-.01em}
+  button{font-family:inherit}
+  /* top bar */
+  .top{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.92);backdrop-filter:saturate(180%) blur(10px);-webkit-backdrop-filter:saturate(180%) blur(10px);border-bottom:1px solid var(--line)}
+  .bar{max-width:720px;margin:0 auto;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .bar h1{margin:0;font-size:17px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:10px;letter-spacing:-.02em}
+  .bar h1 img{width:34px;height:34px;border-radius:50%;object-fit:cover;background:#fff;box-shadow:0 0 0 1px var(--line)}
+  .chip{background:var(--soft);border:1px solid var(--line);color:var(--text);border-radius:999px;padding:5px 12px 5px 6px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;max-width:160px;min-height:34px}
+  .chip img{width:24px;height:24px;border-radius:50%;margin-right:7px;object-fit:cover;background:#eee;flex:none}
+  .chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:6px}
+  .chip img+span{padding-left:0}
+  /* bottom nav */
+  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+  .tabs .in{max-width:720px;margin:0 auto;display:flex;height:var(--nav-h)}
+  .tabs button{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:600;color:#9ca3af;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .tabs button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .tabs button.active{color:var(--accent)}
+  main{max-width:720px;margin:0 auto;padding:16px 16px calc(var(--nav-h) + 24px + env(safe-area-inset-bottom))}
+  /* cards & buttons */
+  .card{background:var(--card);border-radius:var(--r);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+  .card>strong,.card .row>strong{font-size:15px;font-weight:700}
   .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
-  button.primary{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(179,20,28,.3)}
-  button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:10px;padding:8px 14px;font-size:14px;cursor:pointer}
-  button.danger{background:transparent;color:var(--danger);border:1px solid var(--danger);border-radius:10px;padding:8px 14px;font-size:14px;cursor:pointer}
-  button.icon{background:transparent;border:none;font-size:20px;cursor:pointer;color:var(--text);padding:4px 10px}
-  button.primary,button.ghost,button.danger{min-height:40px;touch-action:manipulation}
-  button:disabled{opacity:.5;cursor:default}
+  button.primary{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:11px 18px;font-size:15px;font-weight:700;cursor:pointer;transition:transform .05s,background .15s}
+  button.primary:active{transform:scale(.98);background:var(--accent-dark)}
+  button.ghost{background:var(--soft);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer}
+  button.ghost:active{background:var(--line)}
+  button.danger{background:transparent;color:var(--danger);border:1px solid var(--line);border-radius:12px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer}
+  button.icon{background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text);padding:4px 12px;border-radius:10px}
+  button.icon:active{background:var(--soft)}
+  button.primary,button.ghost,button.danger{min-height:42px;touch-action:manipulation}
+  button:disabled{opacity:.45;cursor:default}
   .muted{color:var(--muted);font-size:13px}
+  .back{display:inline-flex;align-items:center;gap:4px;background:none;border:none;color:var(--muted);font-size:14px;font-weight:600;padding:4px 0;margin-bottom:8px;cursor:pointer}
+  .back svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  /* badges */
+  .badge{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px;margin-right:6px;vertical-align:middle;letter-spacing:0}
+  .badge.regular{background:var(--regular-soft);color:var(--regular)} .badge.flash{background:var(--flash-soft);color:#b45309}
+  .adminBadge{font-size:11px;background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 7px;margin-left:4px;vertical-align:middle;font-weight:700}
+  /* home */
+  .hero{background:linear-gradient(135deg,#c8161f 0%,#8e0f16 100%);color:#fff;border-radius:20px;padding:18px 18px 16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(142,15,22,.25);position:relative;overflow:hidden}
+  .hero:before{content:"";position:absolute;right:-30px;top:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.08)}
+  .hero .hello{font-size:13px;opacity:.85;font-weight:500}
+  .hero .next{margin-top:10px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:12px 14px;cursor:pointer}
+  .hero .next.empty{cursor:default;color:#fff;text-align:left;padding:12px 14px}
+  .hero .lbl{font-size:12px;font-weight:700;opacity:.9;letter-spacing:.02em}
+  .hero .ttl{font-size:19px;font-weight:800;margin-top:2px;letter-spacing:-.02em}
+  .hero .sub{font-size:13px;opacity:.9;margin-top:2px}
+  .hero .cnt{display:inline-block;margin-top:8px;font-size:12px;font-weight:700;background:#fff;color:var(--accent-ink);border-radius:999px;padding:3px 10px}
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+  .tile{background:var(--card);border-radius:14px;padding:12px 8px;text-align:center;box-shadow:var(--shadow)}
+  .tile b{display:block;font-size:24px;font-weight:800;color:var(--text);letter-spacing:-.03em;line-height:1.2}
+  .tile span{font-size:12px;color:var(--muted);font-weight:500}
+  .up{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
+  .up:first-child{border-top:none;padding-top:6px}
+  .up:active{opacity:.6}
+  .up .d{min-width:48px;text-align:center;background:var(--soft);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:6px 4px;line-height:1.15}
+  .up .d b{display:block;font-size:19px;font-weight:800}
+  .up .d small{font-size:11px;color:var(--muted);font-weight:600}
+  .up .t{flex:1;min-width:0}
+  .up .t .title{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .up .joined{font-size:11px;font-weight:700;background:#dcfce7;color:#15803d;border-radius:999px;padding:3px 9px;white-space:nowrap}
+  .seg{display:inline-flex;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .seg button{background:none;border:none;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);border-radius:8px}
+  .seg button.active{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .empty{text-align:center;padding:18px 0 10px;color:var(--muted);font-size:14px}
+  .empty svg{width:36px;height:36px;stroke:#d1d5db;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;margin-bottom:6px}
   /* calendar */
-  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-  .cal-head strong{font-size:17px}
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .cal-head strong{font-size:18px;font-weight:800;letter-spacing:-.02em}
   .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-  .cal .dow{text-align:center;font-size:12px;color:var(--muted);padding:4px 0}
-  .cal .day{min-height:58px;border:1px solid var(--line);border-radius:8px;padding:4px;cursor:pointer;background:var(--card);display:flex;flex-direction:column;gap:2px;overflow:hidden}
-  .cal .day.other{opacity:.35}
-  .cal .day.today .n{background:var(--accent);color:#fff;border-radius:50%;width:20px;height:20px;line-height:20px;text-align:center}
-  .cal .day.selected{background:var(--accent-soft);border-color:var(--accent)}
-  .cal .day .n{font-size:12px;font-weight:600}
-  .cal .day .n.sun{color:var(--danger)}
-  .cal .day .n.sat{color:var(--regular)}
-  .cal .tag{font-size:10px;border-radius:4px;padding:1px 4px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .tag.regular{background:var(--regular)} .tag.flash{background:var(--flash)}
-  .badge{display:inline-block;font-size:11px;border-radius:4px;padding:2px 6px;color:#fff;margin-right:6px;vertical-align:middle}
-  .badge.regular{background:var(--regular)} .badge.flash{background:var(--flash)}
-  .item{padding:10px 0;border-top:1px solid var(--line);cursor:pointer}
-  .item:first-of-type{border-top:none}
-  .item .title{font-weight:600;font-size:15px}
-  .item:active{opacity:.7}
-  .info{margin-top:10px;display:grid;gap:6px}
-  .info>div{display:grid;grid-template-columns:44px 1fr;gap:8px;align-items:start}
-  .info span{color:var(--muted);font-size:13px;padding-top:1px}
+  .cal .dow{text-align:center;font-size:11px;font-weight:600;color:var(--muted);padding:4px 0}
+  .cal .day{min-height:60px;border-radius:12px;padding:5px 4px;cursor:pointer;background:var(--soft);display:flex;flex-direction:column;align-items:center;gap:3px;overflow:hidden;border:1.5px solid transparent;-webkit-tap-highlight-color:transparent}
+  .cal .day.other{opacity:.3}
+  .cal .day .n{font-size:13px;font-weight:600;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%}
+  .cal .day.today .n{background:var(--accent);color:#fff}
+  .cal .day.selected{background:#fff;border-color:var(--accent);box-shadow:var(--shadow)}
+  .cal .day .n.sun{color:#dc2626} .cal .day.today .n.sun{color:#fff}
+  .cal .day .n.sat{color:var(--regular)} .cal .day.today .n.sat{color:#fff}
+  .cal .tag{width:100%;font-size:10px;font-weight:600;border-radius:4px;padding:1px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+  .tag.regular{background:var(--regular-soft);color:var(--regular)} .tag.flash{background:var(--flash-soft);color:#b45309}
+  .legend{display:flex;gap:10px;align-items:center}
+  .legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+  .item{padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
+  .item:first-of-type{border-top:none;padding-top:6px}
+  .item .title{font-weight:700;font-size:15px}
+  .item:active{opacity:.6}
+  /* detail */
+  .dhead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .dtitle{font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1.3}
+  .dday{font-size:12px;font-weight:800;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:4px 10px;white-space:nowrap}
+  .info{margin-top:12px;display:grid;gap:8px}
+  .info>div{display:grid;grid-template-columns:48px 1fr;gap:8px;align-items:start}
+  .info span{color:var(--muted);font-size:13px;font-weight:500;padding-top:1px}
   .info b{font-weight:600}
   /* participants */
-  .people{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
-  .person{background:var(--accent-soft);color:#8e0f16;border-radius:999px;padding:5px 11px;font-size:13px;font-weight:500}
-  .person.me{background:var(--accent);color:#fff}
+  .people{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 12px}
+  .person{background:var(--soft);border:1px solid var(--line);color:var(--text);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600;display:inline-flex;align-items:center}
+  .person.me{background:var(--accent-soft);border-color:transparent;color:var(--accent-ink)}
+  .person .x{margin-left:6px;cursor:pointer;opacity:.5;font-weight:700;font-size:15px;line-height:1}
+  .person .x:hover{opacity:1}
   /* bracket */
-  .round{margin-top:10px}
-  .round h4{margin:8px 0 6px;font-size:14px;color:var(--muted);letter-spacing:.02em}
-  .match{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:6px;font-size:14px}
-  .match .team{text-align:center}
+  .round{margin-top:12px}
+  .round h4{margin:8px 0 6px;font-size:13px;color:var(--muted);font-weight:700;letter-spacing:.02em}
+  .match{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:6px;font-size:14px}
+  .match .team{text-align:center;font-weight:600}
   .match .score{display:flex;align-items:center;gap:4px}
-  .match input{width:40px;text-align:center;font-size:15px;padding:4px;border:1px solid var(--line);border-radius:6px}
-  .match.done{background:#fff8f0;border-color:#f3d9b1}
-  .rest{font-size:13px;color:var(--muted)}
+  .match input{width:44px;text-align:center;font-size:16px;font-weight:700;padding:5px;border:1px solid var(--line);border-radius:8px;background:#fff}
+  .match input:disabled{background:transparent;border-color:transparent;color:var(--text);opacity:1}
+  .match.done{background:#f0fdf4;border-color:#bbf7d0}
+  .rest{font-size:13px;color:var(--muted);margin-top:2px}
+  table.st{width:100%;border-collapse:collapse;font-size:14px}
+  table.st th{text-align:center;font-weight:600;color:var(--muted);font-size:12px;padding-bottom:4px}
+  table.st th:first-child{text-align:left}
+  table.st td{padding:7px 0;border-top:1px solid var(--line);text-align:center;font-weight:600}
+  table.st td:first-child{text-align:left}
+  /* members */
+  .member{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+  .member:first-child{border-top:none}
+  .member img{width:34px;height:34px;border-radius:50%;object-fit:cover;background:#eee;flex:none}
+  .member .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+  .avatar-lg{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#eee;flex:none}
+  button.kakao{width:100%;background:#FEE500;color:#191919;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px}
+  button.kakao svg{width:18px;height:18px;fill:#191919}
   /* form */
-  label{display:block;font-size:13px;color:var(--muted);margin-top:10px}
-  input,select,textarea{width:100%;font-size:15px;padding:9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--text)}
-  textarea{min-height:60px;resize:vertical}
+  label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:12px 0 5px}
+  input,select,textarea{width:100%;font-size:15px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);color:var(--text);font-family:inherit}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(192,21,29,.12)}
+  textarea{min-height:64px;resize:vertical}
   .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:flex-end;justify-content:center;z-index:10}
+  .modal{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
   .modal.open{display:flex}
-  .sheet{background:var(--card);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:18px;max-height:92vh;overflow:auto}
-  @media(min-width:600px){.modal{align-items:center}.sheet{border-radius:16px}}
-  .banner{background:#fff3cd;border:1px solid #ffe08a;color:#6b4e00;padding:10px 12px;border-radius:10px;margin-bottom:12px;font-size:14px}
+  .sheet{background:var(--card);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:20px 18px calc(18px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto;animation:up .18s ease-out}
+  @keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
+  @media(min-width:600px){.modal{align-items:center}.sheet{border-radius:22px;padding-bottom:18px}}
+  .banner{background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:10px 12px;border-radius:12px;margin-bottom:12px;font-size:14px}
   .banner code{background:#fff;padding:1px 4px;border-radius:4px}
   .hidden{display:none !important}
-  /* tabs */
-  .tabs{display:flex;background:var(--card);border-bottom:1px solid var(--line)}
-  .tabs button{flex:1;background:none;border:none;padding:11px 0;font-size:15px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;font-weight:500}
-  .tabs button.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
-  /* home */
-  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
-  .tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 8px;text-align:center;box-shadow:0 1px 4px rgba(42,29,30,.05)}
-  .tile b{display:block;font-size:22px;color:var(--accent)}
-  .tile span{font-size:12px;color:var(--muted)}
-  .up{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}
-  .up:first-child{border-top:none}
-  .up .d{min-width:44px;text-align:center;background:var(--accent-soft);color:#8e0f16;border-radius:10px;padding:6px 4px;line-height:1.15}
-  .up .d b{display:block;font-size:18px}
-  .up .d small{font-size:11px}
-  .up .t{flex:1;min-width:0}
-  .up .t .title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .up .joined{font-size:11px;background:var(--accent);color:#fff;border-radius:999px;padding:3px 8px;white-space:nowrap}
-  .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
-  .seg button{background:none;border:none;padding:7px 14px;font-size:14px;cursor:pointer;color:var(--muted)}
-  .seg button.active{background:var(--accent);color:#fff;font-weight:600}
-  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:20}
+  .toast{position:fixed;bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;transition:.2s;pointer-events:none;z-index:20;white-space:nowrap}
   .toast.show{opacity:1}
-  table.st{width:100%;border-collapse:collapse;font-size:14px}
-  table.st th{text-align:center;font-weight:500}
-  table.st th:first-child{text-align:left}
-  table.st td{padding:4px 0;border-top:1px solid var(--line);text-align:center}
-  table.st td:first-child{text-align:left}
   /* 좁은 화면(폰) */
   @media(max-width:480px){
-    main{padding:12px}
-    .card{padding:12px}
+    main{padding-left:12px;padding-right:12px}
+    .card{padding:14px}
     .cal{gap:3px}
-    .cal .day{min-height:52px;padding:3px;gap:3px}
-    .cal .tag{font-size:0;height:6px;padding:0;border-radius:3px}   /* 제목 대신 색 막대 */
+    .cal .day{min-height:54px;padding:4px 2px;gap:3px}
+    .cal .tag{font-size:0;height:5px;padding:0;border-radius:3px;background:var(--regular)}
+    .cal .tag.flash{background:var(--flash)}
     .match{grid-template-columns:1fr;gap:4px;text-align:center}
     .match .score{justify-content:center}
-    .match input{width:48px;font-size:16px}
     input,select,textarea{font-size:16px}   /* iOS 자동 확대 방지 */
   }
 </style>
 </head>
 <body>
-<div class="top">
-<header>
-  <h1 onclick="showView('home')"><img src="icon-192.png" alt="" onerror="this.remove()"><span id="clubName">BY 테니스 클럽</span></h1>
-  <div>
+<header class="top">
+  <div class="bar">
+    <h1 onclick="showView('home')"><img src="icon-192.png" alt="" onerror="this.remove()"><span id="clubName">BY 테니스 클럽</span></h1>
     <button class="chip" id="userChip" onclick="openProfile()"><span>로그인</span></button>
   </div>
 </header>
-<nav class="tabs" id="tabs">
-  <button data-view="home" onclick="showView('home')">홈</button>
-  <button data-view="calendar" onclick="showView('calendar')">달력</button>
-</nav>
-</div>
 
 <main>
   <div id="banner" class="banner hidden"></div>
 
   <!-- 홈 대시보드 -->
   <section id="viewHome" class="hidden">
+    <div class="hero" id="hero"></div>
     <div class="tiles" id="tiles"></div>
     <div class="card">
       <div class="row"><strong>다가오는 모임</strong><button class="primary" onclick="openCreate()">+ 모임 만들기</button></div>
@@ -197,7 +233,7 @@
       </div>
       <div class="cal" id="calGrid"></div>
       <div class="row" style="margin-top:10px">
-        <span class="muted"><span class="badge regular">정기</span><span class="badge flash">번개</span></span>
+        <span class="legend muted"><span><i style="background:var(--regular)"></i>정기</span><span><i style="background:var(--flash)"></i>번개</span></span>
         <button class="ghost" onclick="goToday()">오늘</button>
       </div>
     </div>
@@ -212,7 +248,7 @@
 
   <!-- 모임 상세 화면 -->
   <section id="viewDetail" class="hidden">
-    <button class="ghost" onclick="showView(state.prevView)" style="margin-bottom:10px">&lsaquo; 뒤로</button>
+    <button class="back" onclick="showView(state.prevView)"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>뒤로</button>
     <div class="card" id="detailInfo"></div>
     <div class="card">
       <strong>참가자 <span id="pCount" class="muted"></span></strong>
@@ -272,7 +308,7 @@
     <img src="icon-192.png" alt="" style="width:72px;height:72px;border-radius:50%">
     <div style="font-weight:700;font-size:17px;margin-top:8px">로그인이 필요합니다</div>
     <p class="muted" style="margin:6px 0 0">모임 만들기와 참가 신청은 로그인 후 이용할 수 있습니다.<br>모임 일정은 로그인 없이도 볼 수 있습니다.</p>
-    <button class="kakao" onclick="loginKakao()">카카오로 로그인</button>
+    <button class="kakao" onclick="loginKakao()"><svg viewBox="0 0 24 24"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.7 6.7L5.6 21.5c-.1.3.2.5.5.3l4.6-3.1c.4 0 .8.1 1.3.1 5.5 0 10-3.6 10-8S17.5 3 12 3z"/></svg>카카오로 로그인</button>
     <div style="margin-top:10px"><button class="ghost" onclick="closeLogin()">나중에</button></div>
   </div>
 </div>
@@ -301,6 +337,14 @@
     </div>
   </div>
 </div>
+
+<nav class="tabs" id="tabs">
+  <div class="in">
+    <button data-view="home" onclick="showView('home')"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z"/></svg><span>홈</span></button>
+    <button data-view="calendar" onclick="showView('calendar')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><span>달력</span></button>
+    <button data-view="profile" onclick="openProfile()"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>내 정보</span></button>
+  </div>
+</nav>
 
 <div class="toast" id="toast"></div>
 
@@ -346,6 +390,7 @@ function showError(e){
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function fmtDate(s){ const [y,m,d]=s.split('-'); const dt=new Date(+y,m-1,+d); return `${+m}월 ${+d}일 (${DOW[dt.getDay()]})`; }
 function fmtTime(t){ return t ? t.slice(0,5) : ''; }
+function dday(s){ const d = Math.round((new Date(s+'T00:00') - new Date(todayStr+'T00:00'))/86400000); return d===0 ? '오늘' : d>0 ? `D-${d}` : `${-d}일 전`; }
 
 // ===== 로그인 / 회원 =====
 const isAdmin   = () => !!state.user && state.user.role === 'admin';
@@ -496,7 +541,7 @@ function renderDayList(){
   $('dayLabel').textContent = fmtDate(state.selected);
   const list = state.meetups.filter(m=>m.date===state.selected);
   const box = $('dayList');
-  if (!list.length){ box.innerHTML = '<p class="muted">이 날은 모임이 없습니다.</p>'; return; }
+  if (!list.length){ box.innerHTML = '<div class="empty">이 날은 모임이 없어요</div>'; return; }
   box.innerHTML = list.map(m => `
     <div class="item" onclick="openDetail('${m.id}')">
       <div class="title"><span class="badge ${m.kind}">${m.kind==='regular'?'정기':'번개'}</span>${esc(m.title)}</div>
@@ -557,6 +602,15 @@ async function loadHome(){
   if (err) showError(err); else $('banner').classList.add('hidden');
   const ups = up.data || [];
   const mine = ups.filter(m => m.participants.some(p=>p.user_id===myId()));
+  const next = ups[0];
+  $('hero').innerHTML = `<div class="hello">${state.user ? esc(state.user.name)+'님, 안녕하세요 👋' : CLUB_NAME+'에 오신 것을 환영합니다'}</div>` + (next
+    ? `<div class="next" onclick="openDetail('${next.id}')">
+        <div class="lbl">다음 모임 · ${dday(next.date)}</div>
+        <div class="ttl">${esc(next.title)}</div>
+        <div class="sub">${fmtDate(next.date)} ${fmtTime(next.start_time)} · ${esc(next.location||'장소 미정')}</div>
+        <span class="cnt">${next.participants.length}/${next.capacity}명 참가${next.participants.some(p=>p.user_id===myId())?' · 참가중':''}</span>
+      </div>`
+    : `<div class="next empty"><div class="ttl">예정된 모임이 없어요</div><div class="sub">번개를 만들어 사람들을 모아 보세요</div></div>`);
   $('tiles').innerHTML = `
     <div class="tile"><b>${month.count ?? 0}</b><span>이번 달 모임</span></div>
     <div class="tile"><b>${ups.length}</b><span>2주 내 모임</span></div>
@@ -569,13 +623,13 @@ async function loadHome(){
       <div class="t"><div class="title"><span class="badge ${m.kind}">${m.kind==='regular'?'정기':'번개'}</span>${esc(m.title)}</div>
         <div class="muted">${fmtTime(m.start_time)} · ${esc(m.location||'장소 미정')} · ${m.participants.length}/${m.capacity}명</div></div>
       ${joined?'<span class="joined">참가중</span>':''}
-    </div>`; }).join('') : '<p class="muted">앞으로 2주 안에 예정된 모임이 없습니다.</p>';
+    </div>`; }).join('') : '<div class="empty"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><div>앞으로 2주 안에 예정된 모임이 없어요</div></div>';
   const pasts = past.data || [];
   $('recent').innerHTML = pasts.length ? pasts.map(m => `
     <div class="item" onclick="openDetail('${m.id}')">
       <div class="title"><span class="badge ${m.kind}">${m.kind==='regular'?'정기':'번개'}</span>${esc(m.title)}</div>
       <div class="muted">${fmtDate(m.date)} · ${esc(m.location||'')} · ${m.participants?.[0]?.count||0}명 참가</div>
-    </div>`).join('') : '<p class="muted">아직 지난 모임이 없습니다.</p>';
+    </div>`).join('') : '<div class="empty">아직 지난 모임이 없어요</div>';
   const sv = localStorage.getItem('startView') || 'home';
   document.querySelectorAll('#startSeg button').forEach(b => b.classList.toggle('active', b.dataset.v===sv));
   $('adminCard').classList.toggle('hidden', !isAdmin());
@@ -595,7 +649,7 @@ async function openDetail(id){
 function renderDetail(){
   const m = state.current;
   $('detailInfo').innerHTML = `
-    <div style="font-size:18px;font-weight:700"><span class="badge ${m.kind}">${m.kind==='regular'?'정기':'번개'}</span>${esc(m.title)}</div>
+    <div class="dhead"><div><span class="badge ${m.kind}">${m.kind==='regular'?'정기':'번개'}</span><div class="dtitle">${esc(m.title)}</div></div><span class="dday">${dday(m.date)}</span></div>
     <div class="info">
       <div><span>일시</span><b>${fmtDate(m.date)} ${fmtTime(m.start_time)}</b></div>
       <div><span>장소</span><b>${esc(m.location||'미정')}</b></div>
