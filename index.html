@@ -60,6 +60,12 @@
   /* badges */
   .badge{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px;margin-right:6px;vertical-align:middle;letter-spacing:0}
   .badge.regular{background:var(--regular-soft);color:var(--regular)} .badge.flash{background:var(--flash-soft);color:#b45309}
+  .lv{font-size:10px;font-weight:700;margin-left:5px;padding:1px 5px;border-radius:5px;background:#fff;border:1px solid var(--line);color:var(--muted)}
+  .person.me .lv{background:rgba(255,255,255,.7);border-color:transparent;color:var(--accent-ink)}
+  .opts{display:flex;gap:6px;flex-wrap:wrap}
+  .opts button{flex:1;min-width:64px;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:9px 6px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;min-height:40px}
+  .opts button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
+  .notice{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:14px;padding:12px 14px;margin-bottom:12px;cursor:pointer;font-size:14px;font-weight:600}
   .adminBadge{font-size:11px;background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 7px;margin-left:4px;vertical-align:middle;font-weight:700}
   /* home */
   .hero{background:linear-gradient(135deg,#c8161f 0%,#8e0f16 100%);color:#fff;border-radius:20px;padding:18px 18px 16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(142,15,22,.25);position:relative;overflow:hidden}
@@ -190,6 +196,7 @@
   <!-- 홈 대시보드 -->
   <section id="viewHome" class="hidden">
     <div class="hero" id="hero"></div>
+    <div class="notice hidden" id="profileNotice" onclick="openProfile()"><span>프로필을 완성해 주세요 (구력·성별·연령대)</span><span>›</span></div>
     <div class="tiles" id="tiles"></div>
     <div class="card">
       <div class="row"><strong>다가오는 모임</strong><button class="primary" onclick="openCreate()">+ 모임 만들기</button></div>
@@ -316,15 +323,22 @@
 <!-- 내 정보 -->
 <div class="modal" id="profileModal" onclick="if(event.target===this)closeProfile()">
   <div class="sheet">
-    <div class="row"><strong>내 정보</strong><button class="icon" onclick="closeProfile()">&times;</button></div>
+    <div class="row"><strong id="profileTitle">내 정보</strong><button class="icon" onclick="closeProfile()">&times;</button></div>
+    <p class="muted hidden" id="profileIntro" style="margin:4px 0 0">대진을 짤 때 참고합니다. 나중에 내 정보에서 바꿀 수 있어요.</p>
     <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
       <img id="pAvatar" class="avatar-lg" src="" alt="" onerror="this.style.visibility='hidden'">
       <div><div id="pName" style="font-weight:700;font-size:16px"></div><div id="pRole" class="muted"></div></div>
     </div>
-    <label>표시 이름</label>
-    <input id="fName" maxlength="20" placeholder="모임에서 쓸 이름" onkeydown="if(event.key==='Enter')saveProfile()">
-    <div style="margin-top:14px;display:flex;gap:8px;justify-content:space-between">
-      <button class="danger" onclick="logout()">로그아웃</button>
+    <label>닉네임 (모임에서 보이는 이름)</label>
+    <input id="fName" maxlength="20" placeholder="예: 홍길동" onkeydown="if(event.key==='Enter')saveProfile()">
+    <label>구력</label>
+    <div class="opts" id="optExp"></div>
+    <label>성별</label>
+    <div class="opts" id="optGender"></div>
+    <label>연령대 <span class="muted" style="font-weight:400">(운영진에게만 보입니다)</span></label>
+    <div class="opts" id="optAge"></div>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:space-between">
+      <button class="danger" id="profileLeft" onclick="logout()">로그아웃</button>
       <button class="primary" onclick="saveProfile()">저장</button>
     </div>
     <div id="claimBox" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
@@ -365,6 +379,11 @@ const pad = n => String(n).padStart(2,'0');
 const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const todayStr = ymd(new Date());
 const DOW = ['일','월','화','수','목','금','토'];
+const EXP    = { '0-1':'1년 미만', '1-3':'1~3년', '3-5':'3~5년', '5+':'5년 이상' };
+const GENDER = { m:'남', f:'여' };
+const AGE    = { '20':'20대', '30':'30대', '40':'40대', '50':'50대', '60':'60대 이상' };
+const https  = u => u ? String(u).replace(/^http:\/\//, 'https://') : '';
+const complete = u => !!(u && u.experience && u.gender && u.age_group);
 
 const state = {
   year: new Date().getFullYear(),
@@ -404,8 +423,14 @@ async function initAuth(){
   db.auth.onAuthStateChange((event, s) => {
     const uid = s ? s.user.id : null;
     if (uid === myId()) return;                     // 같은 사용자면 무시
-    setUser(s ? s.user : null).then(refreshView);
+    setUser(s ? s.user : null).then(() => { refreshView(); maybeOnboard(); });
   });
+  maybeOnboard();
+}
+function maybeOnboard(){
+  if (!state.user || complete(state.user)) return;
+  if (sessionStorage.getItem('onboardSkipped')) return;
+  openProfile(true);
 }
 async function setUser(u){
   if (!u){ state.user = null; renderUser(); return; }
@@ -419,7 +444,7 @@ async function setUser(u){
 function renderUser(){
   const u = state.user;
   $('userChip').innerHTML = u
-    ? `${u.avatar_url ? `<img src="${esc(u.avatar_url)}" alt="">` : ''}<span>${esc(u.name)}</span>`
+    ? `${u.avatar_url ? `<img src="${esc(https(u.avatar_url))}" alt="">` : ''}<span>${esc(u.name)}</span>`
     : '<span>카카오 로그인</span>';
 }
 function refreshView(){
@@ -444,14 +469,25 @@ async function logout(){
   if (error) return showError(error);
   toast('로그아웃했습니다');
 }
-function openProfile(){
+const pick = { experience: null, gender: null, age_group: null };
+function renderOpts(id, map, key){
+  $(id).innerHTML = Object.entries(map).map(([v,l]) => `<button type="button" class="${pick[key]===v?'on':''}" onclick="pick.${key}='${v}';renderOpts('${id}',${key==='experience'?'EXP':key==='gender'?'GENDER':'AGE'},'${key}')">${l}</button>`).join('');
+}
+function openProfile(onboard){
   if (!requireLogin()) return;
   const u = state.user;
-  $('pAvatar').src = u.avatar_url || ''; $('pAvatar').style.visibility = u.avatar_url ? 'visible' : 'hidden';
+  $('pAvatar').src = https(u.avatar_url); $('pAvatar').style.visibility = u.avatar_url ? 'visible' : 'hidden';
   $('pName').textContent = u.name;
   $('pRole').textContent = isAdmin() ? '운영진' : '회원';
   $('fName').value = u.name; $('fAdminCode').value = '';
-  $('claimBox').classList.toggle('hidden', isAdmin());
+  pick.experience = u.experience || null; pick.gender = u.gender || null; pick.age_group = u.age_group || null;
+  renderOpts('optExp', EXP, 'experience'); renderOpts('optGender', GENDER, 'gender'); renderOpts('optAge', AGE, 'age_group');
+  $('profileTitle').textContent = onboard ? '프로필을 완성해 주세요' : '내 정보';
+  $('profileIntro').classList.toggle('hidden', !onboard);
+  const left = $('profileLeft');
+  if (onboard){ left.textContent = '나중에'; left.onclick = () => { sessionStorage.setItem('onboardSkipped','1'); closeProfile(); }; }
+  else { left.textContent = '로그아웃'; left.onclick = logout; }
+  $('claimBox').classList.toggle('hidden', isAdmin() || !!onboard);
   $('profileModal').classList.add('open');
 }
 async function claimAdmin(){
@@ -473,17 +509,18 @@ function closeProfile(){ $('profileModal').classList.remove('open'); }
 async function saveProfile(){
   const n = $('fName').value.trim();
   if (!n) return toast('이름을 입력하세요');
-  const { error } = await db.from('profiles').update({ name: n }).eq('id', myId());
+  const row = { name: n, experience: pick.experience, gender: pick.gender, age_group: pick.age_group };
+  const { error } = await db.from('profiles').update(row).eq('id', myId());
   if (error) return showError(error);
-  state.user.name = n; renderUser(); closeProfile(); toast('저장했습니다'); refreshView();
+  Object.assign(state.user, row); renderUser(); closeProfile(); toast('저장했습니다'); refreshView();
 }
 async function loadMembers(){
   const { data, error } = await db.from('profiles').select('*').order('created_at');
   if (error) return showError(error);
   $('members').innerHTML = data.map(p => `
     <div class="member">
-      ${p.avatar_url ? `<img src="${esc(p.avatar_url)}" alt="">` : '<img alt="">'}
-      <div class="nm">${esc(p.name)}${p.role==='admin' ? '<span class="adminBadge">운영진</span>' : ''}</div>
+      ${p.avatar_url ? `<img src="${esc(https(p.avatar_url))}" alt="">` : '<img alt="">'}
+      <div class="nm">${esc(p.name)}${p.role==='admin' ? '<span class="adminBadge">운영진</span>' : ''}<div class="muted" style="font-size:12px">${[EXP[p.experience], GENDER[p.gender], AGE[p.age_group]].filter(Boolean).join(' · ') || '프로필 미입력'}</div></div>
       ${p.id === myId() ? '<span class="muted">나</span>' :
         `<button class="ghost" style="min-height:32px;padding:4px 10px" onclick="setRole('${p.id}','${p.role==='admin'?'member':'admin'}')">${p.role==='admin'?'운영진 해제':'운영진 지정'}</button>`}
     </div>`).join('') || '<p class="muted">회원이 없습니다.</p>';
@@ -632,13 +669,14 @@ async function loadHome(){
     </div>`).join('') : '<div class="empty">아직 지난 모임이 없어요</div>';
   const sv = localStorage.getItem('startView') || 'home';
   document.querySelectorAll('#startSeg button').forEach(b => b.classList.toggle('active', b.dataset.v===sv));
+  $('profileNotice').classList.toggle('hidden', !state.user || complete(state.user));
   $('adminCard').classList.toggle('hidden', !isAdmin());
   if (isAdmin()) loadMembers();
 }
 
 // ===== 상세 =====
 async function openDetail(id){
-  const { data, error } = await db.from('meetups').select('*, participants(*), matches(*)').eq('id', id).single();
+  const { data, error } = await db.from('meetups').select('*, participants(*, profiles(experience,gender)), matches(*)').eq('id', id).single();
   if (error) return showError(error);
   data.participants.sort((a,b)=>a.created_at.localeCompare(b.created_at));
   data.matches.sort((a,b)=>a.round-b.round || a.court-b.court);
@@ -661,7 +699,7 @@ function renderDetail(){
   const manage = canManage(m);
   $('pCount').textContent = `${names.length}/${m.capacity}`;
   $('people').innerHTML = m.participants.length
-    ? m.participants.map(p=>`<span class="person ${p.user_id===myId()?'me':''}">${esc(p.name)}${manage && p.user_id!==myId() ? `<span class="x" title="참가 취소시키기" onclick="removeParticipant('${p.id}','${esc(p.name)}')">&times;</span>` : ''}</span>`).join('')
+    ? m.participants.map(p=>`<span class="person ${p.user_id===myId()?'me':''}">${esc(p.name)}${p.profiles?.experience ? `<span class="lv">${EXP[p.profiles.experience]||''}</span>` : ''}${manage && p.user_id!==myId() ? `<span class="x" title="참가 취소시키기" onclick="removeParticipant('${p.id}','${esc(p.name)}')">&times;</span>` : ''}</span>`).join('')
     : '<span class="muted">아직 없음</span>';
   const joined = m.participants.some(p=>p.user_id===myId());
   $('joinBtn').textContent = joined ? '참가 취소' : '참가';
