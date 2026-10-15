@@ -113,6 +113,13 @@
   .strip{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:14px;padding:11px 14px;margin-bottom:12px;box-shadow:var(--shadow);cursor:pointer;font-size:14px}
   .strip .lbl{flex:none;font-size:11px;font-weight:800;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:2px 7px}
   .strip .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+  .person{cursor:pointer}
+  .mstat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+  .mstat div{background:var(--soft);border-radius:12px;padding:10px 6px;text-align:center}
+  .mstat b{display:block;font-size:20px;font-weight:800}
+  .mstat span{font-size:11px;color:var(--muted)}
+  .mrow{display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+  .mrow span:first-child{color:var(--muted)}
   .adminBadge{font-size:11px;background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 7px;margin-left:4px;vertical-align:middle;font-weight:700}
   /* home */
   .hero{background:linear-gradient(135deg,#c8161f 0%,#8e0f16 100%);color:#fff;border-radius:20px;padding:18px 18px 16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(142,15,22,.25);position:relative;overflow:hidden}
@@ -487,6 +494,14 @@
     <button class="kakao" onclick="loginKakao()"><svg viewBox="0 0 24 24"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.7 6.7L5.6 21.5c-.1.3.2.5.5.3l4.6-3.1c.4 0 .8.1 1.3.1 5.5 0 10-3.6 10-8S17.5 3 12 3z"/></svg>카카오로 로그인</button>
     <button class="ghost" style="width:100%;margin-top:8px" onclick="openGuest()">게스트로 참여 (이름 + 전화번호)</button>
     <div style="margin-top:10px"><button class="back" style="margin:0" onclick="closeLogin()">나중에</button></div>
+  </div>
+</div>
+
+<!-- 회원 정보 -->
+<div class="modal" id="memberModal" onclick="if(event.target===this)closeMember()">
+  <div class="sheet">
+    <div class="row"><strong>회원 정보</strong><button class="icon" onclick="closeMember()">&times;</button></div>
+    <div id="memberBody" style="margin-top:10px"></div>
   </div>
 </div>
 
@@ -1245,6 +1260,52 @@ async function saveRules(){
   if (error) return showError(error);
   state.rules = v; toast('회칙을 저장했습니다');
 }
+// ===== 회원 정보 =====
+function closeMember(){ $('memberModal').classList.remove('open'); }
+async function openMember(uid){
+  if (!uid) return;
+  $('memberBody').innerHTML = '<div class="empty">불러오는 중…</div>';
+  $('memberModal').classList.add('open');
+  const [pr, pj, mt, pv] = await Promise.all([
+    db.from('profiles').select('*').eq('id', uid).maybeSingle(),
+    db.from('participants').select('status, meetups(date)').eq('user_id', uid),
+    db.from('matches').select('team_a,team_b,score_a,score_b').or(`team_a.cs.{${uid}},team_b.cs.{${uid}}`),
+    isAdmin() ? db.from('profile_private').select('phone').eq('id', uid).maybeSingle() : Promise.resolve({ data: null })
+  ]);
+  const u = pr.data; if (!u){ $('memberBody').innerHTML = '<div class="empty">회원 정보를 찾을 수 없어요</div>'; return; }
+  const joins = (pj.data || []).filter(x => x.status !== 'pending');
+  const total = joins.length, upcoming = joins.filter(x => x.meetups && x.meetups.date >= todayStr).length;
+  let w = 0, l = 0;
+  (mt.data || []).forEach(x => {
+    if (x.score_a == null || x.score_b == null) return;
+    const inA = (x.team_a || []).includes(uid);
+    const win = inA ? x.score_a > x.score_b : x.score_b > x.score_a;
+    const lose = inA ? x.score_a < x.score_b : x.score_b < x.score_a;
+    if (win) w++; if (lose) l++;
+  });
+  const grade = u.role === 'owner' ? '대표 ★' : u.role === 'admin' ? '관리자' : u.is_guest ? '게스트' : '회원';
+  const rows = [
+    ['등급', grade],
+    ['구력', EXP[u.experience] || '미입력'],
+    ['성별', GENDER[u.gender] || '미입력'],
+  ];
+  if (isAdmin()){
+    rows.push(['생년', u.birth_year ? `${u.birth_year}년 (${age(u.birth_year)}세)` : '미입력']);
+    rows.push(['전화번호', pv.data && pv.data.phone ? fmtPhone(pv.data.phone) : '미입력']);
+  } else if (state.displayFormat !== 'name' && u.birth_year) rows.push(['나이', `${age(u.birth_year)}세`]);
+  $('memberBody').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px">
+      ${u.avatar_url ? `<img class="avatar-lg" src="${esc(https(u.avatar_url))}" alt="">` : '<div class="avatar-lg" style="display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--muted)">' + esc((u.name||'?').slice(0,1)) + '</div>'}
+      <div><div style="font-weight:800;font-size:17px">${esc(u.name)}${crown(u)}</div><div class="muted">${grade}${u.id === myId() ? ' · 나' : ''}</div></div>
+    </div>
+    <div class="mstat">
+      <div><b>${total}</b><span>참가 횟수</span></div>
+      <div><b>${upcoming}</b><span>예정</span></div>
+      <div><b>${w}승 ${l}패</b><span>전적</span></div>
+    </div>
+    <div style="margin-top:12px">${rows.map(([k,v]) => `<div class="mrow"><span>${k}</span><span>${esc(v)}</span></div>`).join('')}</div>`;
+}
+
 // ===== 댓글 =====
 const fmtDT = iso => { const d = new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 async function loadComments(){
@@ -1427,7 +1488,7 @@ function renderDetail(){
   const manage = canManage(m);
   $('pCount').textContent = m.capacity ? `${names.length}/${m.capacity}` : `${names.length}`;
   $('people').innerHTML = m.participants.length
-    ? m.participants.map(p=>`<span class="person ${p.user_id===m.created_by_id?'host':(p.user_id===myId()?'me':'')}">${esc(fmtName(p))}${p.profiles?.is_guest ? '<span class="g">게스트</span>' : ''}${manage && p.user_id!==myId() ? `<span class="x" title="참가 취소시키기" onclick="removeParticipant('${p.id}','${esc(p.profiles?.name || p.name)}')">&times;</span>` : ''}</span>`).join('')
+    ? m.participants.map(p=>`<span class="person ${p.user_id===m.created_by_id?'host':(p.user_id===myId()?'me':'')}" onclick="openMember('${p.user_id}')">${esc(fmtName(p))}${p.profiles?.is_guest ? '<span class="g">게스트</span>' : ''}${manage && p.user_id!==myId() ? `<span class="x" title="참가 취소시키기" onclick="event.stopPropagation();removeParticipant('${p.id}','${esc(p.profiles?.name || p.name)}')">&times;</span>` : ''}</span>`).join('')
     : '<span class="muted">아직 없음</span>';
   // 신청 대기 목록
   const pend = m.pending || [];
