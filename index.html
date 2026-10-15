@@ -874,7 +874,7 @@ async function openCreate(){
 }
 function setJoinMode(v){
   document.querySelectorAll('#joinSeg button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
-  $('joinHint').textContent = v === 'approve' ? '신청이 들어오면 주최자나 관리자가 승인해야 명단에 올라갑니다.' : '누르는 즉시 참가됩니다.';
+  $('joinHint').textContent = v === 'approve' ? '회원도 신청 후 승인을 거칩니다. 게스트는 항상 신청 후 승인입니다.' : '회원은 누르는 즉시 참가됩니다. 게스트는 항상 신청 후 승인입니다.';
 }
 const apCount = m => (m.participants || []).filter(p => p.status !== 'pending').length;
 function setCap(v){
@@ -1034,7 +1034,7 @@ function renderDetail(){
       <div><span>장소</span><b>${esc(m.location||'미정')}</b></div>
       <div><span>코트</span><b>${m.courts ? m.courts+'면' : '미정'}</b></div>
       <div><span>인원</span><b>${capText(m.capacity)}</b></div>
-      <div><span>참가</span><b>${m.join_mode === 'approve' ? '신청 후 승인' : '자동 승인'}</b></div>
+      <div><span>참가</span><b>${m.join_mode === 'approve' ? '신청 후 승인' : '회원 자동 승인'} <span class="muted" style="font-weight:400">· 게스트는 신청</span></b></div>
       <div><span>주최</span><b>${esc(m.host ? fmtName(m.host) : (m.created_by||'-'))}</b></div>
       ${m.note?`<div><span>메모</span><b style="white-space:pre-wrap;font-weight:400">${esc(m.note)}</b></div>`:''}
     </div>`;
@@ -1056,7 +1056,8 @@ function renderDetail(){
   const mineP = m.participants.find(p=>p.user_id===myId()) || pend.find(p=>p.user_id===myId());
   const joined = !!mineP && mineP.status !== 'pending';
   const full = !mineP && !!m.capacity && names.length >= m.capacity;
-  $('joinBtn').textContent = mineP ? (joined ? '참가 취소' : '신청 취소') : full ? '정원 마감' : (m.join_mode === 'approve' && !manage ? '참가 신청' : '참가');
+  const needsRequest = !manage && (m.join_mode === 'approve' || (state.user && state.user.is_guest));
+  $('joinBtn').textContent = mineP ? (joined ? '참가 취소' : '신청 취소') : full ? '정원 마감' : (needsRequest ? '참가 신청' : '참가');
   $('joinBtn').className = mineP ? 'ghost' : 'primary';
   $('joinBtn').disabled = full;
   $('deleteBtn').classList.toggle('hidden', !manage);
@@ -1080,7 +1081,7 @@ async function toggleJoin(){
     ? await db.from('participants').delete().eq('id', mine.id)
     : await db.from('participants').insert({ meetup_id: m.id, user_id: myId(), name: state.user.name });
   if (error) return showError(error);
-  const requested = !mine && m.join_mode === 'approve' && !canManage(m);
+  const requested = !mine && !canManage(m) && (m.join_mode === 'approve' || state.user.is_guest);
   toast(mine ? (mine.status === 'pending' ? '신청을 취소했습니다' : '참가를 취소했습니다') : requested ? '참가 신청했어요. 주최자가 승인하면 명단에 올라가요' : '참가했습니다');
   openDetail(m.id);
 }

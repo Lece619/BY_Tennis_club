@@ -19,10 +19,11 @@
 - `schema13_phone.sql` : 전화번호로 중복 가입 방지 SQL (13단계)
 - `schema14_host_edit.sql` : 주최자·참가자 이름을 프로필에서, 대진표 회원 ID 저장 SQL (14단계, 기존 대진표 삭제됨)
 - `schema15_join_mode.sql` : 모임별 참가 방식(자동 승인 / 신청 후 승인) SQL (15단계)
+- `schema16_guest_request.sql` : 게스트는 항상 신청 후 승인 SQL (16단계)
 
 ## 처음 한 번 할 일
 1. Supabase 대시보드 → 왼쪽 메뉴 **SQL Editor** → `schema.sql` 내용을 붙여넣고 **Run**
-2. 같은 곳에서 `schema2_auth.sql`, 이어서 `schema3_admin_code.sql`, `schema4_profile.sql`, `schema5_guest_birth.sql`, `schema6_display.sql`, `schema7_create_rules.sql`, `schema8_meetup_options.sql`, `schema9_nickname.sql`, `schema10_approval.sql`, `schema11_owner.sql`, `schema12_guest_default.sql`, `schema13_phone.sql`, `schema14_host_edit.sql`, `schema15_join_mode.sql` 도 **Run** (3단계 파일 안의 관리자 코드를 먼저 원하는 값으로 바꾸세요)
+2. 같은 곳에서 `schema2_auth.sql`, 이어서 `schema3_admin_code.sql`, `schema4_profile.sql`, `schema5_guest_birth.sql`, `schema6_display.sql`, `schema7_create_rules.sql`, `schema8_meetup_options.sql`, `schema9_nickname.sql`, `schema10_approval.sql`, `schema11_owner.sql`, `schema12_guest_default.sql`, `schema13_phone.sql`, `schema14_host_edit.sql`, `schema15_join_mode.sql`, `schema16_guest_request.sql` 도 **Run** (3단계 파일 안의 관리자 코드를 먼저 원하는 값으로 바꾸세요)
 3. Supabase → Authentication → Providers → Kakao 켜고 REST API 키와 클라이언트 시크릿 입력
 4. 카카오 개발자 콘솔 → 플랫폼 키 → REST API 키 → 리다이렉트 URI에 `https://<프로젝트>.supabase.co/auth/v1/callback` 등록
 5. 사이트에서 카카오 로그인 → 오른쪽 위 이름 → 내 정보 → **관리자 인증**에 코드 입력
@@ -39,7 +40,7 @@
 ## 권한
 - 로그인 없이: 일정과 참가자, 대진표 보기
 - 게스트: 참가(또는 참가 신청)와 취소, 내 정보 수정 (모임 만들기는 불가)
-- 모임마다 참가 방식을 고릅니다. 자동 승인이면 즉시 참가, 신청 후 승인이면 주최자·관리자가 상세 화면의 신청 대기 목록에서 승인
+- 모임마다 참가 방식을 고릅니다. 자동 승인이면 회원은 즉시 참가, 신청 후 승인이면 회원도 신청. 게스트는 어떤 모임이든 항상 신청 후 승인
 - 회원: 자유 모임 만들기, 참가 신청과 취소, 내 정보 수정
 - 홈 아래 코트 예약 링크는 index.html 의 `LINKS` 에서 수정
 - 정기 모임 만들기: 관리자만
