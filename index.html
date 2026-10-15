@@ -86,6 +86,24 @@
   .sug .meta{font-size:12px;color:var(--muted)}
   .sug .body{white-space:pre-wrap;font-size:14px;margin:4px 0 6px}
   .sug.done{opacity:.55}
+  .cmt{padding:9px 0;border-top:1px solid var(--line)}
+  .cmt:first-child{border-top:none;padding-top:4px}
+  .cmt .who{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+  .cmt .who b{color:var(--text);font-weight:700;font-size:13px}
+  .cmt .txt{white-space:pre-wrap;font-size:14px;margin-top:2px}
+  .cmtForm{display:flex;gap:6px;margin-top:10px}
+  .cmtForm input{flex:1}
+  .notice-card{position:relative}
+  .notice-card.pinned{border:1.5px solid var(--accent);}
+  .notice-card .nt{font-size:16px;font-weight:800;letter-spacing:-.02em;margin-right:60px}
+  .notice-card .nm{font-size:12px;color:var(--muted);margin-top:2px}
+  .notice-card .nb{white-space:pre-wrap;font-size:14px;margin-top:10px;line-height:1.6}
+  .pin{display:inline-block;font-size:11px;font-weight:700;background:var(--accent);color:#fff;border-radius:6px;padding:2px 7px;margin-right:6px;vertical-align:2px}
+  .tabs button .dot{position:absolute;top:10px;right:calc(50% - 16px);width:7px;height:7px;border-radius:50%;background:var(--accent)}
+  .tabs button{position:relative}
+  .strip{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:14px;padding:11px 14px;margin-bottom:12px;box-shadow:var(--shadow);cursor:pointer;font-size:14px}
+  .strip .lbl{flex:none;font-size:11px;font-weight:800;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:2px 7px}
+  .strip .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
   .adminBadge{font-size:11px;background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 7px;margin-left:4px;vertical-align:middle;font-weight:700}
   /* home */
   .hero{background:linear-gradient(135deg,#c8161f 0%,#8e0f16 100%);color:#fff;border-radius:20px;padding:18px 18px 16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(142,15,22,.25);position:relative;overflow:hidden}
@@ -232,6 +250,7 @@
   <!-- 홈 대시보드 -->
   <section id="viewHome" class="hidden">
     <div class="hero" id="hero"></div>
+    <div class="strip hidden" id="noticeStrip" onclick="showView('notices')"><span class="lbl">공지</span><span class="t" id="noticeStripText"></span><span class="muted">›</span></div>
     <div class="notice hidden" id="approvalNotice"></div>
     <div class="notice hidden" id="profileNotice" onclick="openProfile()"><span>프로필을 완성해 주세요 (전화번호·구력·성별·생년)</span><span>›</span></div>
     <div class="tiles" id="tiles"></div>
@@ -328,11 +347,28 @@
       <button class="addBtn hidden" id="addRoundBtn" onclick="addMatch(null)">+ 라운드 추가</button>
       <div id="standings"></div>
     </div>
+    <div class="card">
+      <strong>댓글 <span class="muted" id="cmtCount"></span></strong>
+      <div id="comments" style="margin-top:6px"></div>
+      <div class="cmtForm">
+        <input id="fComment" maxlength="300" placeholder="예: 송금 완료했어요" onkeydown="if(event.key==='Enter')submitComment()">
+        <button class="primary" style="white-space:nowrap;padding:10px 14px" onclick="submitComment()">등록</button>
+      </div>
+    </div>
     <div class="row" style="justify-content:flex-end;margin-bottom:30px">
       <button class="ghost" id="editBtn" onclick="openEdit()">모임 수정</button>
       <button class="danger" id="deleteBtn" onclick="deleteMeetup()">모임 삭제</button>
     </div>
   </section>
+  <!-- 공지사항 -->
+  <section id="viewNotices" class="hidden">
+    <div class="row" style="margin-bottom:12px">
+      <strong style="font-size:18px">공지사항</strong>
+      <button class="primary hidden" id="noticeNewBtn" onclick="openNotice()">+ 공지 작성</button>
+    </div>
+    <div id="noticeList"></div>
+  </section>
+
   <!-- 관리자 페이지 -->
   <section id="viewAdmin" class="hidden">
     <div class="card">
@@ -441,6 +477,22 @@
   </div>
 </div>
 
+<!-- 공지 작성/수정 -->
+<div class="modal" id="noticeModal" onclick="if(event.target===this)closeNotice()">
+  <div class="sheet">
+    <div class="row"><strong id="noticeTitle">공지 작성</strong><button class="icon" onclick="closeNotice()">&times;</button></div>
+    <label>제목</label>
+    <input id="fNTitle" maxlength="60" placeholder="예: 11월 정기 모임 안내">
+    <label>내용</label>
+    <textarea id="fNContent" style="min-height:140px" placeholder="내용을 적어 주세요"></textarea>
+    <div class="row" style="margin-top:12px">
+      <div><strong style="font-size:14px">상단 고정</strong><div class="muted">목록 맨 위에 고정합니다</div></div>
+      <div class="seg"><button type="button" data-v="on" onclick="setPin(true)">고정</button><button type="button" data-v="off" onclick="setPin(false)">해제</button></div>
+    </div>
+    <button class="primary" style="width:100%;margin-top:16px" onclick="submitNotice()">저장</button>
+  </div>
+</div>
+
 <!-- 건의하기 -->
 <div class="modal" id="suggestModal" onclick="if(event.target===this)closeSuggest()">
   <div class="sheet">
@@ -513,6 +565,7 @@
   <div class="in">
     <button data-view="home" onclick="showView('home')"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z"/></svg><span>홈</span></button>
     <button data-view="calendar" onclick="showView('calendar')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><span>달력</span></button>
+    <button data-view="notices" id="navNotices" onclick="showView('notices')"><svg viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></svg><span>공지</span><i class="dot hidden" id="noticeDot"></i></button>
     <button data-view="admin" id="navAdmin" class="hidden" onclick="showView('admin')"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg><span>관리</span></button>
     <button data-view="profile" onclick="openProfile()"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>내 정보</span></button>
   </div>
@@ -1027,12 +1080,13 @@ function showView(name){
   state.current = null;
   state.view = name;
   if (name !== 'detail') state.prevView = name;
-  ['home','calendar','detail','admin'].forEach(v => $('view'+v[0].toUpperCase()+v.slice(1)).classList.toggle('hidden', v!==name));
+  ['home','calendar','detail','admin','notices'].forEach(v => $('view'+v[0].toUpperCase()+v.slice(1)).classList.toggle('hidden', v!==name));
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.view===name));
   window.scrollTo(0,0);
   if (name==='home') loadHome();
   if (name==='calendar') loadMonth();
   if (name==='admin') loadAdmin();
+  if (name==='notices') loadNotices();
 }
 function showCalendar(){ showView('calendar'); }
 function setUpFilter(v){ localStorage.setItem('upFilter', v); renderUpcoming(); }
@@ -1114,6 +1168,89 @@ async function saveRules(){
   if (error) return showError(error);
   state.rules = v; toast('회칙을 저장했습니다');
 }
+// ===== 댓글 =====
+const fmtDT = iso => { const d = new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+async function loadComments(){
+  const m = state.current; if (!m) return;
+  const { data, error } = await db.from('comments').select('*, profiles(name,role,show_crown)').eq('meetup_id', m.id).order('created_at');
+  if (error) return showError(error);
+  if (!state.current || state.current.id !== m.id) return;
+  const manage = canManage(m);
+  $('cmtCount').textContent = data.length ? `${data.length}` : '';
+  $('comments').innerHTML = data.length ? data.map(c => `
+    <div class="cmt">
+      <div class="who"><span><b>${esc(c.profiles ? c.profiles.name + crown(c.profiles) : '회원')}</b> · ${fmtDT(c.created_at)}</span>
+        ${(c.user_id === myId() || manage) ? `<button class="linkBtn" style="padding:0 4px" onclick="deleteComment('${c.id}')">삭제</button>` : ''}</div>
+      <div class="txt">${esc(c.content)}</div>
+    </div>`).join('') : '<div class="muted" style="padding:4px 0">아직 댓글이 없어요. 송금 완료, 늦게 도착 같은 메모를 남겨 보세요.</div>';
+}
+async function submitComment(){
+  if (!requireLogin(submitComment)) return;
+  if (!(await requireApproved())) return;
+  const c = $('fComment').value.trim(); if (!c) return;
+  const { error } = await db.from('comments').insert({ meetup_id: state.current.id, user_id: myId(), content: c });
+  if (error) return showError(error);
+  $('fComment').value = ''; loadComments();
+}
+async function deleteComment(id){
+  if (!confirm('댓글을 삭제할까요?')) return;
+  const { error } = await db.from('comments').delete().eq('id', id);
+  if (error) return showError(error);
+  loadComments();
+}
+
+// ===== 공지사항 =====
+let noticeEditId = null, pinOn = false;
+function setPin(v){ pinOn = v; document.querySelectorAll('#noticeModal .seg button').forEach(b => b.classList.toggle('active', b.dataset.v === (v?'on':'off'))); }
+async function loadNoticeStrip(){
+  const { data } = await db.from('notices').select('id,title,created_at').order('pinned', { ascending: false }).order('created_at', { ascending: false }).limit(1);
+  const n = data && data[0];
+  $('noticeStrip').classList.toggle('hidden', !n);
+  if (n) $('noticeStripText').textContent = n.title;
+  const { data: latest } = await db.from('notices').select('created_at').order('created_at', { ascending: false }).limit(1);
+  const seen = localStorage.getItem('noticeSeen') || '';
+  $('noticeDot').classList.toggle('hidden', !(latest && latest[0] && latest[0].created_at > seen));
+}
+async function loadNotices(){
+  $('noticeNewBtn').classList.toggle('hidden', !isAdmin());
+  const { data, error } = await db.from('notices').select('*, profiles(name)').order('pinned', { ascending: false }).order('created_at', { ascending: false });
+  if (error) return showError(error);
+  if (data.length) localStorage.setItem('noticeSeen', data.reduce((a, n) => n.created_at > a ? n.created_at : a, ''));
+  $('noticeDot').classList.add('hidden');
+  $('noticeList').innerHTML = data.length ? data.map(n => `
+    <div class="card notice-card ${n.pinned?'pinned':''}">
+      <div class="nt">${n.pinned?'<span class="pin">고정</span>':''}${esc(n.title)}</div>
+      <div class="nm">${esc(n.profiles ? n.profiles.name : '관리자')} · ${fmtDT(n.created_at)}${n.updated_at && n.updated_at.slice(0,16) !== n.created_at.slice(0,16) ? ' (수정됨)' : ''}</div>
+      <div class="nb">${esc(n.content)}</div>
+      ${isAdmin() ? `<div style="display:flex;gap:4px;justify-content:flex-end;margin-top:10px">${sb('수정', `openNotice('${n.id}')`)}${sb('삭제', `deleteNotice('${n.id}')`)}</div>` : ''}
+    </div>`).join('') : '<div class="card"><div class="empty">아직 공지가 없어요</div></div>';
+  state.notices = data;
+}
+function openNotice(id){
+  if (!isAdmin()) return;
+  const n = id ? (state.notices || []).find(x => x.id === id) : null;
+  noticeEditId = id || null;
+  $('noticeTitle').textContent = n ? '공지 수정' : '공지 작성';
+  $('fNTitle').value = n ? n.title : ''; $('fNContent').value = n ? n.content : ''; setPin(n ? n.pinned : false);
+  $('noticeModal').classList.add('open'); setTimeout(()=>$('fNTitle').focus(), 50);
+}
+function closeNotice(){ $('noticeModal').classList.remove('open'); noticeEditId = null; }
+async function submitNotice(){
+  const title = $('fNTitle').value.trim(), content = $('fNContent').value.trim();
+  if (!title || !content) return toast('제목과 내용을 입력하세요');
+  const row = { title, content, pinned: pinOn };
+  const { error } = noticeEditId
+    ? await db.from('notices').update({ ...row, updated_at: new Date().toISOString() }).eq('id', noticeEditId)
+    : await db.from('notices').insert({ ...row, user_id: myId() });
+  if (error) return showError(error);
+  closeNotice(); toast(noticeEditId ? '공지를 수정했습니다' : '공지를 올렸습니다'); loadNotices();
+}
+async function deleteNotice(id){
+  if (!confirm('이 공지를 삭제할까요?')) return;
+  const { error } = await db.from('notices').delete().eq('id', id);
+  if (error) return showError(error);
+  loadNotices();
+}
 function openLink(i){
   const l = LINKS[i]; if (!l) return;
   if (!confirm(`${l.name} 사이트로 이동할까요?\n새 탭이 열립니다.`)) return;
@@ -1163,6 +1300,7 @@ async function loadHome(){
       <div class="muted">${fmtDate(m.date)} · ${esc(m.location||'')} · ${apCount(m)}명 참가</div>
     </div>`).join('') : '<div class="empty">아직 지난 모임이 없어요</div>';
   renderRules();
+  loadNoticeStrip();
   $('links').innerHTML = LINKS.map((l, i) => `<div class="link" onclick="openLink(${i})"><span>${esc(l.name)}</span><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></div>`).join('');
   const sv = localStorage.getItem('startView') || 'home';
   document.querySelectorAll('#startSeg button').forEach(b => b.classList.toggle('active', b.dataset.v===sv));
@@ -1190,6 +1328,7 @@ async function openDetail(id){
   showView('detail');
   state.current = data;
   renderDetail();
+  loadComments();
 }
 function renderDetail(){
   const m = state.current;
