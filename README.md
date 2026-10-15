@@ -13,10 +13,11 @@
 - `schema7_create_rules.sql` : 모임 생성 규칙 SQL (7단계)
 - `schema8_meetup_options.sql` : 장소 필수, 코트 수 선택, 인원 제한 없음 SQL (8단계)
 - `schema9_nickname.sql` : 닉네임 중복 방지 SQL (9단계)
+- `schema10_approval.sql` : 회원 승인 + 관리자 인증 버그 수정 SQL (10단계)
 
 ## 처음 한 번 할 일
 1. Supabase 대시보드 → 왼쪽 메뉴 **SQL Editor** → `schema.sql` 내용을 붙여넣고 **Run**
-2. 같은 곳에서 `schema2_auth.sql`, 이어서 `schema3_admin_code.sql`, `schema4_profile.sql`, `schema5_guest_birth.sql`, `schema6_display.sql`, `schema7_create_rules.sql`, `schema8_meetup_options.sql`, `schema9_nickname.sql` 도 **Run** (3단계 파일 안의 관리자 코드를 먼저 원하는 값으로 바꾸세요)
+2. 같은 곳에서 `schema2_auth.sql`, 이어서 `schema3_admin_code.sql`, `schema4_profile.sql`, `schema5_guest_birth.sql`, `schema6_display.sql`, `schema7_create_rules.sql`, `schema8_meetup_options.sql`, `schema9_nickname.sql`, `schema10_approval.sql` 도 **Run** (3단계 파일 안의 관리자 코드를 먼저 원하는 값으로 바꾸세요)
 3. Supabase → Authentication → Providers → Kakao 켜고 REST API 키와 클라이언트 시크릿 입력
 4. 카카오 개발자 콘솔 → 플랫폼 키 → REST API 키 → 리다이렉트 URI에 `https://<프로젝트>.supabase.co/auth/v1/callback` 등록
 5. 사이트에서 카카오 로그인 → 오른쪽 위 이름 → 내 정보 → **관리자 인증**에 코드 입력
@@ -24,6 +25,9 @@
 ## 게스트
 카카오 계정이 없는 사람은 로그인 창의 "게스트로 참여"에서 이름과 전화번호로 등록합니다. 같은 이름과 번호로 다른 폰에서도 로그인됩니다.
 이 기능을 쓰려면 Supabase → Authentication → Providers → Email 에서 **Confirm email 을 꺼야** 합니다.
+
+## 가입 승인
+새로 가입한 계정(카카오·게스트)은 '승인 대기' 상태입니다. 관리자가 하단 **관리** 탭에서 승인해야 모임 참가와 생성이 됩니다.
 
 ## 권한
 - 로그인 없이: 일정과 참가자, 대진표 보기

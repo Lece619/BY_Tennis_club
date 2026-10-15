@@ -197,6 +197,7 @@
   <!-- 홈 대시보드 -->
   <section id="viewHome" class="hidden">
     <div class="hero" id="hero"></div>
+    <div class="notice hidden" id="approvalNotice"></div>
     <div class="notice hidden" id="profileNotice" onclick="openProfile()"><span>프로필을 완성해 주세요 (구력·성별·생년)</span><span>›</span></div>
     <div class="tiles" id="tiles"></div>
     <div class="card">
@@ -206,28 +207,6 @@
     <div class="card">
       <strong>지난 모임</strong>
       <div id="recent" style="margin-top:6px"></div>
-    </div>
-    <div class="card hidden" id="adminCard">
-      <strong>회원 관리 <span class="adminBadge">관리자</span></strong>
-      <div class="muted">관리자 지정과 해제를 할 수 있습니다.</div>
-      <div style="margin-top:10px;padding:12px;background:var(--soft);border-radius:12px">
-        <div style="font-size:14px;font-weight:600">이름 표시 방식 <span class="muted" style="font-weight:400">(모든 회원 화면에 적용)</span></div>
-        <div class="seg" id="fmtSeg" style="margin-top:8px;display:flex">
-          <button data-v="name" onclick="setDisplayFormat('name')">닉네임</button>
-          <button data-v="name_age" onclick="setDisplayFormat('name_age')">닉네임 / 나이</button>
-          <button data-v="name_age_exp" onclick="setDisplayFormat('name_age_exp')">닉네임 / 나이 / 구력</button>
-        </div>
-        <div class="muted" style="margin-top:6px">예: <span id="fmtExample"></span></div>
-      </div>
-      <div id="members" style="margin-top:6px"></div>
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
-        <div style="font-size:14px;font-weight:600">관리자 코드 변경</div>
-        <div class="muted">새 관리자은 내 정보에서 이 코드를 입력해 인증합니다. 6자 이상.</div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <input id="fNewCode" placeholder="새 관리자 코드" autocomplete="off">
-          <button class="ghost" style="white-space:nowrap" onclick="changeAdminCode()">변경</button>
-        </div>
-      </div>
     </div>
     <div class="card">
       <div class="row">
@@ -292,6 +271,38 @@
     </div>
     <div class="row" style="justify-content:flex-end;margin-bottom:30px">
       <button class="danger" id="deleteBtn" onclick="deleteMeetup()">모임 삭제</button>
+    </div>
+  </section>
+  <!-- 관리자 페이지 -->
+  <section id="viewAdmin" class="hidden">
+    <div class="card">
+      <div class="row"><strong>승인 대기</strong><span class="muted" id="pendingCount"></span></div>
+      <div class="muted">카카오나 게스트로 새로 가입한 계정입니다. 모임 회원이 맞으면 승인하세요.</div>
+      <div id="pending" style="margin-top:6px"></div>
+    </div>
+    <div class="card">
+      <div class="row"><strong>회원</strong><span class="muted" id="memberCount"></span></div>
+      <div id="members" style="margin-top:6px"></div>
+    </div>
+    <div class="card">
+      <strong>설정</strong>
+      <div style="margin-top:10px;padding:12px;background:var(--soft);border-radius:12px">
+        <div style="font-size:14px;font-weight:600">이름 표시 방식 <span class="muted" style="font-weight:400">(모든 회원 화면에 적용)</span></div>
+        <div class="seg" id="fmtSeg" style="margin-top:8px;display:flex">
+          <button data-v="name" onclick="setDisplayFormat('name')">닉네임</button>
+          <button data-v="name_age" onclick="setDisplayFormat('name_age')">닉네임 / 나이</button>
+          <button data-v="name_age_exp" onclick="setDisplayFormat('name_age_exp')">닉네임 / 나이 / 구력</button>
+        </div>
+        <div class="muted" style="margin-top:6px">예: <span id="fmtExample"></span></div>
+      </div>
+      <div style="margin-top:12px;padding:12px;background:var(--soft);border-radius:12px">
+        <div style="font-size:14px;font-weight:600">관리자 코드 변경</div>
+        <div class="muted">새 관리자는 내 정보에서 이 코드를 입력해 인증합니다. 6자 이상.</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input id="fNewCode" placeholder="새 관리자 코드" autocomplete="off">
+          <button class="ghost" style="white-space:nowrap" onclick="changeAdminCode()">변경</button>
+        </div>
+      </div>
     </div>
   </section>
 </main>
@@ -396,6 +407,7 @@
   <div class="in">
     <button data-view="home" onclick="showView('home')"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z"/></svg><span>홈</span></button>
     <button data-view="calendar" onclick="showView('calendar')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><span>달력</span></button>
+    <button data-view="admin" id="navAdmin" class="hidden" onclick="showView('admin')"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg><span>관리</span></button>
     <button data-view="profile" onclick="openProfile()"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>내 정보</span></button>
   </div>
 </nav>
@@ -482,6 +494,12 @@ function dday(s){ const d = Math.round((new Date(s+'T00:00') - new Date(todayStr
 const isAdmin   = () => !!state.user && state.user.role === 'admin';
 const canManage = m  => !!state.user && (isAdmin() || m.created_by_id === state.user.id);   // 관리자 또는 모임 주최자
 const myId      = () => state.user ? state.user.id : null;
+const approved  = () => !!state.user && (isAdmin() || state.user.status === 'approved');
+function requireApproved(){
+  if (approved()) return true;
+  toast(state.user && state.user.status === 'blocked' ? '이용이 제한된 계정이에요' : '관리자 승인 후 이용할 수 있어요');
+  return false;
+}
 
 async function initAuth(){
   const { data: { session } } = await db.auth.getSession();
@@ -510,6 +528,7 @@ async function setUser(u){
 }
 function renderUser(){
   const u = state.user;
+  $('navAdmin').classList.toggle('hidden', !isAdmin());
   $('userChip').innerHTML = u
     ? `${u.avatar_url ? `<img src="${esc(https(u.avatar_url))}" alt="">` : ''}<span>${esc(u.name)}</span>`
     : '<span>카카오 로그인</span>';
@@ -589,7 +608,7 @@ async function claimAdmin(){
   const { data, error } = await db.rpc('claim_admin', { code });
   if (error) return showError(error);
   if (!data) return toast('코드가 맞지 않습니다');
-  state.user.role = 'admin'; closeProfile(); toast('관리자이 되었습니다'); refreshView();
+  state.user.role = 'admin'; state.user.status = 'approved'; renderUser(); closeProfile(); toast('관리자가 되었습니다'); refreshView();
 }
 async function changeAdminCode(){
   const c = $('fNewCode').value.trim();
@@ -614,25 +633,54 @@ async function saveProfile(){
   Object.assign(state.user, row); renderUser(); closeProfile(); toast('저장했습니다'); refreshView();
 }
 let phones = {};
-async function loadMembers(){
-  const [{ data, error }, pv] = await Promise.all([
+let joins = {};   // user_id -> {total, upcoming}
+function memberRow(p, actions){
+  const j = joins[p.id] || { total: 0, upcoming: 0 };
+  const info = ([EXP[p.experience], GENDER[p.gender], born(p.birth_year), phones[p.id]].filter(Boolean).join(' · ') || '프로필 미입력')
+    + ` · 참가 ${j.total}회` + (j.upcoming ? ` (예정 ${j.upcoming})` : '');
+  const tags = (p.role==='admin' ? '<span class="adminBadge">관리자</span>' : '')
+    + (p.is_guest ? '<span class="adminBadge" style="background:#e0f2fe;color:#075985">게스트</span>' : '')
+    + (p.status==='blocked' ? '<span class="adminBadge" style="background:#fee2e2;color:#991b1b">제한</span>' : '');
+  return `<div class="member">
+      ${p.avatar_url ? `<img src="${esc(https(p.avatar_url))}" alt="">` : '<img alt="">'}
+      <div class="nm">${esc(p.name)}${tags}<div class="muted" style="font-size:12px">${info}</div></div>
+      <div style="display:flex;gap:4px;flex:none">${actions}</div>
+    </div>`;
+}
+const sb = (label, fn, cls='ghost') => `<button class="${cls}" style="min-height:32px;padding:4px 10px;font-size:13px" onclick="${fn}">${label}</button>`;
+async function loadAdmin(){
+  renderFmtSeg();
+  const [{ data, error }, pv, pj] = await Promise.all([
     db.from('profiles').select('*').order('created_at'),
-    db.from('profile_private').select('id,phone')
+    db.from('profile_private').select('id,phone'),
+    db.from('participants').select('user_id, meetups(date)')
   ]);
   if (error) return showError(error);
   phones = Object.fromEntries((pv.data||[]).map(r => [r.id, r.phone]));
-  $('members').innerHTML = data.map(p => `
-    <div class="member">
-      ${p.avatar_url ? `<img src="${esc(https(p.avatar_url))}" alt="">` : '<img alt="">'}
-      <div class="nm">${esc(p.name)}${p.role==='admin' ? '<span class="adminBadge">관리자</span>' : ''}${p.is_guest ? '<span class="adminBadge" style="background:#e0f2fe;color:#075985">게스트</span>' : ''}<div class="muted" style="font-size:12px">${[EXP[p.experience], GENDER[p.gender], born(p.birth_year), phones[p.id]].filter(Boolean).join(' · ') || '프로필 미입력'}</div></div>
-      ${p.id === myId() ? '<span class="muted">나</span>' :
-        `<button class="ghost" style="min-height:32px;padding:4px 10px" onclick="setRole('${p.id}','${p.role==='admin'?'member':'admin'}')">${p.role==='admin'?'관리자 해제':'관리자 지정'}</button>`}
-    </div>`).join('') || '<p class="muted">회원이 없습니다.</p>';
+  joins = {};
+  (pj.data||[]).forEach(r => { if (!r.user_id) return; const j = joins[r.user_id] || (joins[r.user_id] = {total:0, upcoming:0}); j.total++; if (r.meetups && r.meetups.date >= todayStr) j.upcoming++; });
+  const pend = data.filter(p => p.status === 'pending');
+  const rest = data.filter(p => p.status !== 'pending');
+  $('pendingCount').textContent = pend.length ? `${pend.length}명` : '';
+  $('pending').innerHTML = pend.map(p => memberRow(p,
+      sb('승인', `setStatus('${p.id}','approved')`, 'primary') + sb('거절', `setStatus('${p.id}','blocked')`)
+    )).join('') || '<div class="empty">승인 대기 중인 가입이 없어요</div>';
+  $('memberCount').textContent = `${rest.length}명`;
+  $('members').innerHTML = rest.map(p => memberRow(p,
+      p.id === myId() ? '<span class="muted" style="padding:6px">나</span>' :
+        sb(p.role==='admin' ? '관리자 해제' : '관리자 지정', `setRole('${p.id}','${p.role==='admin'?'member':'admin'}')`)
+        + (p.role==='admin' ? '' : sb(p.status==='blocked' ? '제한 해제' : '제한', `setStatus('${p.id}','${p.status==='blocked'?'approved':'blocked'}')`))
+    )).join('') || '<div class="empty">회원이 없어요</div>';
 }
 async function setRole(id, role){
   const { error } = await db.from('profiles').update({ role }).eq('id', id);
   if (error) return showError(error);
-  toast(role==='admin' ? '관리자으로 지정했습니다' : '관리자을 해제했습니다'); loadMembers();
+  toast(role==='admin' ? '관리자로 지정했습니다' : '관리자를 해제했습니다'); loadAdmin();
+}
+async function setStatus(id, status){
+  const { error } = await db.from('profiles').update({ status }).eq('id', id);
+  if (error) return showError(error);
+  toast({approved:'승인했습니다', blocked:'이용을 제한했습니다'}[status] || '저장했습니다'); loadAdmin();
 }
 
 // ===== 달력 =====
@@ -694,6 +742,7 @@ function renderDayList(){
 // ===== 모임 생성 =====
 function openCreate(){
   if(!requireLogin(openCreate)) return;
+  if (!requireApproved()) return;
   if (state.user.is_guest) return toast('모임 만들기는 회원만 할 수 있어요');
   const kinds = isAdmin() ? ['flash','regular'] : ['flash'];
   $('fKind').innerHTML = kinds.map(k => `<option value="${k}">${KIND[k]}</option>`).join('');
@@ -734,14 +783,16 @@ async function submitCreate(){
 // ===== 상세 =====
 // ===== 화면 전환 =====
 function showView(name){
+  if (name === 'admin' && !isAdmin()) name = 'home';
   state.current = null;
   state.view = name;
   if (name !== 'detail') state.prevView = name;
-  ['home','calendar','detail'].forEach(v => $('view'+v[0].toUpperCase()+v.slice(1)).classList.toggle('hidden', v!==name));
+  ['home','calendar','detail','admin'].forEach(v => $('view'+v[0].toUpperCase()+v.slice(1)).classList.toggle('hidden', v!==name));
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.view===name));
   window.scrollTo(0,0);
   if (name==='home') loadHome();
   if (name==='calendar') loadMonth();
+  if (name==='admin') loadAdmin();
 }
 function showCalendar(){ showView('calendar'); }
 function setStartView(v){
@@ -796,8 +847,13 @@ async function loadHome(){
   $('profileNotice').classList.toggle('hidden', !state.user || complete(state.user));
   $('logoutRow').classList.toggle('hidden', !state.user);
   if (state.user) $('logoutWho').textContent = `${state.user.name} (${state.user.is_guest ? '게스트' : '카카오'})`;
-  $('adminCard').classList.toggle('hidden', !isAdmin());
-  if (isAdmin()) { renderFmtSeg(); loadMembers(); }
+  const an = $('approvalNotice');
+  if (state.user && !approved()){
+    an.classList.remove('hidden');
+    an.innerHTML = state.user.status === 'blocked'
+      ? '<span>이용이 제한된 계정이에요. 관리자에게 문의하세요.</span>'
+      : '<span>가입 승인 대기 중이에요. 관리자가 승인하면 모임에 참가할 수 있어요.</span>';
+  } else an.classList.add('hidden');
 }
 
 // ===== 상세 =====
@@ -848,6 +904,7 @@ async function toggleJoin(){
   if(!requireLogin(toggleJoin)) return;
   const m = state.current;
   const mine = m.participants.find(p=>p.user_id===myId());
+  if (!mine && !requireApproved()) return;
   const { error } = mine
     ? await db.from('participants').delete().eq('id', mine.id)
     : await db.from('participants').insert({ meetup_id: m.id, user_id: myId(), name: state.user.name });
