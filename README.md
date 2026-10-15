@@ -19,7 +19,7 @@
 - `schema13_phone.sql` : 전화번호로 중복 가입 방지 SQL (13단계)
 - `schema14_host_edit.sql` : 주최자·참가자 이름을 프로필에서, 대진표 회원 ID 저장 SQL (14단계, 기존 대진표 삭제됨)
 - `schema15_join_mode.sql` : 모임별 참가 방식(자동 승인 / 신청 후 승인) SQL (15단계)
-- `schema16_guest_request.sql` : 게스트는 항상 신청 후 승인 SQL (16단계)
+- `schema16_guest_request.sql` : 게스트는 항상 신청 후 승인 + 관리자 스스로 내려오기 SQL (16단계)
 
 ## 처음 한 번 할 일
 1. Supabase 대시보드 → 왼쪽 메뉴 **SQL Editor** → `schema.sql` 내용을 붙여넣고 **Run**

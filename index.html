@@ -402,6 +402,7 @@
   <div class="sheet">
     <div class="row"><strong id="profileTitle">내 정보</strong>
       <div style="display:flex;align-items:center;gap:4px">
+        <button class="linkBtn hidden" id="resignLink" onclick="resignAdmin()">관리자 내려놓기</button>
         <button class="linkBtn" id="claimLink" onclick="showClaim()">관리자 인증</button>
         <button class="icon" onclick="closeProfile()">&times;</button>
       </div>
@@ -669,10 +670,18 @@ function openProfile(onboard){
   if (onboard){ left.textContent = '나중에'; left.onclick = () => { sessionStorage.setItem('onboardSkipped','1'); closeProfile(); }; }
   else { left.textContent = '로그아웃'; left.onclick = logout; }
   $('claimLink').classList.toggle('hidden', isOwner() || !!onboard);
+  $('resignLink').classList.toggle('hidden', !(isAdmin() && !isOwner()) || !!onboard);
   $('claimBox').classList.add('hidden');
   $('profileModal').classList.add('open');
 }
 function showClaim(){ $('claimBox').classList.remove('hidden'); $('claimLink').classList.add('hidden'); setTimeout(()=>$('fAdminCode').focus(), 50); }
+async function resignAdmin(){
+  if (!confirm('관리자에서 내려와 일반 회원이 될까요?\n다시 관리자가 되려면 대표가 지정하거나 관리자 코드를 입력해야 해요.')) return;
+  const { error } = await db.rpc('resign_admin');
+  if (error) return showError(error);
+  state.user.role = 'member'; renderUser(); closeProfile(); toast('일반 회원이 되었습니다');
+  if (state.view === 'admin') showView('home'); else refreshView();
+}
 let crownOn = true;
 function setCrown(v){ crownOn = v; document.querySelectorAll('#crownRow .seg button').forEach(b => b.classList.toggle('active', b.dataset.v === (v?'on':'off'))); }
 async function claimAdmin(){

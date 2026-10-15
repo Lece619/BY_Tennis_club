@@ -15,3 +15,18 @@ begin
   end if;
   return new;
 end $$;
+
+-- 관리자가 스스로 회원으로 내려오기 (대표는 먼저 대표를 넘겨야 함)
+create or replace function resign_admin() returns void
+language plpgsql security definer set search_path = public as $$
+declare r text;
+begin
+  select role into r from profiles where id = auth.uid();
+  if r = 'owner' then raise exception '대표는 먼저 다른 관리자에게 대표를 넘긴 뒤 내려올 수 있습니다'; end if;
+  if r <> 'admin' then raise exception '관리자가 아닙니다'; end if;
+  perform set_config('app.claim_admin', 'on', true);
+  update profiles set role = 'member' where id = auth.uid();
+  perform set_config('app.claim_admin', 'off', true);
+end $$;
+grant execute on function resign_admin() to authenticated;
+revoke execute on function resign_admin() from anon;
