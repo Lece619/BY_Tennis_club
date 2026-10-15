@@ -553,7 +553,9 @@ function dday(s){ const d = Math.round((new Date(s+'T00:00') - new Date(todayStr
 const isAdmin   = () => !!state.user && (state.user.role === 'admin' || state.user.role === 'owner');
 const isOwner   = () => !!state.user && state.user.role === 'owner';
 const crown     = pr => (pr && pr.role === 'owner' && pr.show_crown !== false) ? ' ★' : '';
-const canManage = m  => !!state.user && (isAdmin() || m.created_by_id === state.user.id);   // 관리자 또는 모임 주최자
+const isHost    = m  => !!state.user && m.created_by_id === state.user.id;
+const canManage = m  => isHost(m) || (isAdmin() && m.kind === 'regular');   // 자유 모임은 주최자만, 정기 모임은 관리자도
+const canDelete = m  => isHost(m) || isAdmin();
 const myId      = () => state.user ? state.user.id : null;
 const approved  = () => !!state.user && (isAdmin() || state.user.status === 'approved');
 async function requireApproved(){
@@ -899,7 +901,7 @@ async function openCreate(){
 }
 function setJoinMode(v){
   document.querySelectorAll('#joinSeg button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
-  $('joinHint').textContent = v === 'approve' ? '회원도 신청 후 승인을 거칩니다. 게스트는 항상 신청 후 승인입니다.' : '회원은 누르는 즉시 참가됩니다. 게스트는 항상 신청 후 승인입니다.';
+  $('joinHint').textContent = v === 'approve' ? '주최자 외에는 관리자도 신청 후 승인을 거칩니다. 게스트는 항상 신청 후 승인입니다.' : '회원은 누르는 즉시 참가됩니다. 게스트는 항상 신청 후 승인입니다.';
 }
 const apCount = m => (m.participants || []).filter(p => p.status !== 'pending').length;
 function setCap(v){
@@ -912,8 +914,8 @@ const capText = c => c ? `${c}명` : '제한 없음';
 const cnt = (n, c) => c ? `${n}/${c}명` : `${n}명`;
 function closeCreate(){ $('createModal').classList.remove('open'); state.editId = null; $('createTitle').textContent = '모임 만들기'; $('createSubmit').textContent = '만들기'; }
 function openEdit(){
-  const m = state.current; if (!m || !canManage(m)) return;
-  if (m.kind === 'regular' && !isAdmin()) return toast(`${KIND.regular}은 관리자만 수정할 수 있어요`);
+  const m = state.current; if (!m) return;
+  if (!canManage(m)) return toast(m.kind === 'regular' ? `${KIND.regular}은 관리자만 수정할 수 있어요` : `${KIND.flash}은 만든 사람만 수정할 수 있어요`);
   const kinds = isAdmin() ? ['flash','regular'] : ['flash'];
   $('fKind').innerHTML = kinds.map(k => `<option value="${k}" ${k===m.kind?'selected':''}>${KIND[k]}</option>`).join('');
   $('kindHint').textContent = '';
@@ -1083,22 +1085,22 @@ function renderDetail(){
   $('pendingList').innerHTML = pend.map(p => `
     <div class="row" style="padding:4px 0">
       <span style="font-size:14px;font-weight:600">${esc(fmtName(p))}${p.user_id===myId()?' <span class="muted">(나)</span>':''}</span>
-      ${manage ? `<span style="display:flex;gap:4px">${sb('승인', `approveParticipant('${p.id}')`, 'primary')}${sb('거절', `removeParticipant('${p.id}','${esc(p.profiles?.name || p.name)}')`)}</span>` : ''}
+      ${manage && p.user_id !== myId() ? `<span style="display:flex;gap:4px">${sb('승인', `approveParticipant('${p.id}')`, 'primary')}${sb('거절', `removeParticipant('${p.id}','${esc(p.profiles?.name || p.name)}')`)}</span>` : (p.user_id === myId() ? '<span class="muted">주최자 승인 대기</span>' : '')}
     </div>`).join('');
   const mineP = m.participants.find(p=>p.user_id===myId()) || pend.find(p=>p.user_id===myId());
   const joined = !!mineP && mineP.status !== 'pending';
   const full = !mineP && !!m.capacity && names.length >= m.capacity;
-  const needsRequest = !manage && (m.join_mode === 'approve' || (state.user && state.user.is_guest));
+  const needsRequest = !isHost(m) && (m.join_mode === 'approve' || (state.user && state.user.is_guest));
   $('joinBtn').textContent = mineP ? (joined ? '참가 취소' : '신청 취소') : full ? '정원 마감' : (needsRequest ? '참가 신청' : '참가');
   $('joinBtn').className = mineP ? 'ghost' : 'primary';
   $('joinBtn').disabled = full;
-  $('deleteBtn').classList.toggle('hidden', !manage);
+  $('deleteBtn').classList.toggle('hidden', !canDelete(m));
   $('editBtn').classList.toggle('hidden', !manage);
   $('genBtn').classList.toggle('hidden', !manage);
   $('rounds').classList.toggle('hidden', !manage);
   $('genBtn').disabled = names.length < 4;
   $('bracketHint').textContent = !manage
-    ? (m.matches.length ? '점수는 주최자와 관리자가 입력합니다.' : '대진표는 주최자나 관리자가 만들면 여기에 표시됩니다.')
+    ? (m.matches.length ? (m.kind==='regular' ? '점수는 주최자와 관리자가 입력합니다.' : '점수는 주최자가 입력합니다.') : (m.kind==='regular' ? '대진표는 주최자나 관리자가 만들면 여기에 표시됩니다.' : '대진표는 주최자가 만들면 여기에 표시됩니다.'))
     : names.length < 4
       ? '참가자가 4명 이상이면 복식 대진을 만들 수 있습니다.'
       : (m.matches.length ? '점수를 입력하면 자동 저장됩니다. 다시 생성하면 기존 대진은 지워집니다.' : '라운드 수를 고르고 대진 생성을 누르세요.');
@@ -1113,7 +1115,7 @@ async function toggleJoin(){
     ? await db.from('participants').delete().eq('id', mine.id)
     : await db.from('participants').insert({ meetup_id: m.id, user_id: myId(), name: state.user.name });
   if (error) return showError(error);
-  const requested = !mine && !canManage(m) && (m.join_mode === 'approve' || state.user.is_guest);
+  const requested = !mine && !isHost(m) && (m.join_mode === 'approve' || state.user.is_guest);
   toast(mine ? (mine.status === 'pending' ? '신청을 취소했습니다' : '참가를 취소했습니다') : requested ? '참가 신청했어요. 주최자가 승인하면 명단에 올라가요' : '참가했습니다');
   openDetail(m.id);
 }

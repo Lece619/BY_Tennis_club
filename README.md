@@ -20,10 +20,11 @@
 - `schema14_host_edit.sql` : 주최자·참가자 이름을 프로필에서, 대진표 회원 ID 저장 SQL (14단계, 기존 대진표 삭제됨)
 - `schema15_join_mode.sql` : 모임별 참가 방식(자동 승인 / 신청 후 승인) SQL (15단계)
 - `schema16_guest_request.sql` : 게스트는 항상 신청 후 승인 + 관리자 스스로 내려오기 SQL (16단계)
+- `schema17_admin_request.sql` : 자유 모임은 생성자가 관리, 관리자도 신청 후 승인 거침 SQL (17단계)
 
 ## 처음 한 번 할 일
 1. Supabase 대시보드 → 왼쪽 메뉴 **SQL Editor** → `schema.sql` 내용을 붙여넣고 **Run**
-2. 같은 곳에서 `schema2_auth.sql`, 이어서 `schema3_admin_code.sql`, `schema4_profile.sql`, `schema5_guest_birth.sql`, `schema6_display.sql`, `schema7_create_rules.sql`, `schema8_meetup_options.sql`, `schema9_nickname.sql`, `schema10_approval.sql`, `schema11_owner.sql`, `schema12_guest_default.sql`, `schema13_phone.sql`, `schema14_host_edit.sql`, `schema15_join_mode.sql`, `schema16_guest_request.sql` 도 **Run** (3단계 파일 안의 관리자 코드를 먼저 원하는 값으로 바꾸세요)
+2. 같은 곳에서 `schema2_auth.sql`, 이어서 `schema3_admin_code.sql`, `schema4_profile.sql`, `schema5_guest_birth.sql`, `schema6_display.sql`, `schema7_create_rules.sql`, `schema8_meetup_options.sql`, `schema9_nickname.sql`, `schema10_approval.sql`, `schema11_owner.sql`, `schema12_guest_default.sql`, `schema13_phone.sql`, `schema14_host_edit.sql`, `schema15_join_mode.sql`, `schema16_guest_request.sql`, `schema17_admin_request.sql` 도 **Run** (3단계 파일 안의 관리자 코드를 먼저 원하는 값으로 바꾸세요)
 3. Supabase → Authentication → Providers → Kakao 켜고 REST API 키와 클라이언트 시크릿 입력
 4. 카카오 개발자 콘솔 → 플랫폼 키 → REST API 키 → 리다이렉트 URI에 `https://<프로젝트>.supabase.co/auth/v1/callback` 등록
 5. 사이트에서 카카오 로그인 → 오른쪽 위 이름 → 내 정보 → **관리자 인증**에 코드 입력
@@ -44,7 +45,9 @@
 - 회원: 자유 모임 만들기, 참가 신청과 취소, 내 정보 수정
 - 홈 아래 코트 예약 링크는 index.html 의 `LINKS` 에서 수정
 - 정기 모임 만들기: 관리자만
-- 모임 주최자: 자기 모임 수정·삭제, 참가자 빼기, 대진 생성, 점수 입력 (정기 모임 수정은 관리자만)
+- 자유 모임 주최자: 자기 모임의 수정·삭제, 참가 승인·거절, 대진 생성, 점수 입력을 혼자 관리 (관리자는 삭제만 가능)
+- 정기 모임: 주최자와 관리자가 함께 관리
+- 신청 후 승인 모임에서는 주최자 외 누구나(관리자·대표 포함) 신청 후 승인. 자기 신청은 스스로 승인 불가
 - 관리자(여러 명): 모든 모임에 주최자 권한, 가입 승인, 회원·게스트 휴식 처리·삭제, 이름 표시 방식 설정
 - 대표(한 명, 별 표시): 관리자 권한 + 관리자 지정·해제, 관리자 삭제, 대표 넘기기, 관리자 코드·대표 코드 변경. 관리자가 내 정보에서 대표 코드를 입력하면 대표가 됩니다.
 
