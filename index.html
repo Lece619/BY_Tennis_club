@@ -303,11 +303,12 @@
           <button data-v="name_age_exp" onclick="setDisplayFormat('name_age_exp')">닉네임 / 나이 / 구력</button>
         </div>
         <div class="muted" style="margin-top:6px">예: <span id="fmtExample"></span></div>
+        <div class="muted" style="margin-top:4px">모임 상세의 참가자 명단, 대진표, 결과 표에 적용됩니다. 다른 회원 화면에는 다음에 모임을 열 때 반영됩니다.</div>
       </div>
       <div id="ownerSettings">
         <div style="margin-top:12px;padding:12px;background:var(--soft);border-radius:12px">
           <div style="font-size:14px;font-weight:600">관리자 코드 변경 <span class="muted" style="font-weight:400">(대표만)</span></div>
-          <div class="muted">새 관리자는 내 정보에서 이 코드를 입력해 인증합니다. 6자 이상.</div>
+          <div class="muted">관리자로 올리고 싶은 회원에게 이 코드를 알려 주면, 그 회원이 내 정보 → 관리자 인증에 입력해 관리자가 됩니다. 회원 목록의 "관리자 지정" 버튼으로 직접 올려도 됩니다. 6자 이상.</div>
           <div style="display:flex;gap:8px;margin-top:8px">
             <input id="fNewCode" placeholder="새 관리자 코드" autocomplete="off">
             <button class="ghost" style="white-space:nowrap" onclick="changeAdminCode()">변경</button>
@@ -315,7 +316,7 @@
         </div>
         <div style="margin-top:12px;padding:12px;background:var(--soft);border-radius:12px">
           <div style="font-size:14px;font-weight:600">대표 코드 변경 <span class="muted" style="font-weight:400">(대표만)</span></div>
-          <div class="muted">관리자가 내 정보에서 이 코드를 입력하면 대표가 됩니다. 6자 이상.</div>
+          <div class="muted">대표 자리를 넘길 때 쓰는 비밀 코드입니다. 평소에는 회원 목록의 "대표 넘기기" 버튼을 쓰면 되고, 이 코드는 대표가 자리를 비웠을 때를 대비한 비상용입니다. 이 코드를 아는 관리자가 내 정보 → 대표 인증에 입력하면 그 사람이 대표가 되고, 기존 대표는 관리자가 됩니다. 아는 사람에게만 알려 주세요. 6자 이상.</div>
           <div style="display:flex;gap:8px;margin-top:8px">
             <input id="fNewOwnerCode" placeholder="새 대표 코드" autocomplete="off">
             <button class="ghost" style="white-space:nowrap" onclick="changeOwnerCode()">변경</button>
@@ -971,6 +972,7 @@ async function loadHome(){
 
 // ===== 상세 =====
 async function openDetail(id){
+  await loadSettings();   // 다른 기기에서 바꾼 이름 표시 방식 반영
   const { data, error } = await db.from('meetups').select('*, participants(*, profiles(experience,gender,birth_year,role,show_crown)), matches(*)').eq('id', id).single();
   if (error) return showError(error);
   data.participants.sort((a,b)=>a.created_at.localeCompare(b.created_at));
