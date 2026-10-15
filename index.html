@@ -245,8 +245,8 @@
       <div id="upcoming" style="margin-top:6px"></div>
     </div>
     <div class="card">
-      <strong>지난 모임</strong>
-      <div id="recent" style="margin-top:6px"></div>
+      <div class="fold" id="recentFold" onclick="toggleRecent()"><strong>지난 모임 <span class="muted" id="recentCount" style="font-weight:500"></span></strong><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
+      <div id="recent" class="hidden" style="margin-top:6px"></div>
     </div>
     <div class="card">
       <div class="fold" id="rulesFold" onclick="toggleRules()"><strong>회칙</strong><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
@@ -1064,6 +1064,11 @@ function renderRules(){
   const open = localStorage.getItem('rulesOpen') === '1';
   $('rulesBody').classList.toggle('hidden', !open); $('rulesFold').classList.toggle('open', open);
 }
+function toggleRecent(){
+  const open = $('recent').classList.contains('hidden');
+  localStorage.setItem('recentOpen', open ? '1' : '0');
+  $('recent').classList.toggle('hidden', !open); $('recentFold').classList.toggle('open', open);
+}
 function toggleRules(){
   const open = $('rulesBody').classList.contains('hidden');
   localStorage.setItem('rulesOpen', open ? '1' : '0');
@@ -1149,6 +1154,9 @@ async function loadHome(){
     <div class="tile"><b>${mine.length}</b><span>내 참가 예정</span></div>`;
   state.ups = ups; renderUpcoming();
   const pasts = past.data || [];
+  $('recentCount').textContent = pasts.length ? `최근 ${pasts.length}개` : '';
+  const ro = localStorage.getItem('recentOpen') === '1';
+  $('recent').classList.toggle('hidden', !ro); $('recentFold').classList.toggle('open', ro);
   $('recent').innerHTML = pasts.length ? pasts.map(m => `
     <div class="item" onclick="openDetail('${m.id}')">
       <div class="title"><span class="badge ${m.kind}">${KINDS[m.kind]||''}</span>${esc(m.title)}</div>
