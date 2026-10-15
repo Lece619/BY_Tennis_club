@@ -196,7 +196,7 @@
   <!-- 홈 대시보드 -->
   <section id="viewHome" class="hidden">
     <div class="hero" id="hero"></div>
-    <div class="notice hidden" id="profileNotice" onclick="openProfile()"><span>프로필을 완성해 주세요 (구력·성별·연령대)</span><span>›</span></div>
+    <div class="notice hidden" id="profileNotice" onclick="openProfile()"><span>프로필을 완성해 주세요 (구력·성별·생년)</span><span>›</span></div>
     <div class="tiles" id="tiles"></div>
     <div class="card">
       <div class="row"><strong>다가오는 모임</strong><button class="primary" onclick="openCreate()">+ 모임 만들기</button></div>
@@ -226,6 +226,10 @@
           <button data-v="home" onclick="setStartView('home')">홈</button>
           <button data-v="calendar" onclick="setStartView('calendar')">달력</button>
         </div>
+      </div>
+      <div class="row hidden" id="logoutRow" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+        <div><strong style="font-size:14px">로그아웃</strong><div class="muted" id="logoutWho"></div></div>
+        <button class="danger" onclick="logout()">로그아웃</button>
       </div>
     </div>
   </section>
@@ -316,7 +320,21 @@
     <div style="font-weight:700;font-size:17px;margin-top:8px">로그인이 필요합니다</div>
     <p class="muted" style="margin:6px 0 0">모임 만들기와 참가 신청은 로그인 후 이용할 수 있습니다.<br>모임 일정은 로그인 없이도 볼 수 있습니다.</p>
     <button class="kakao" onclick="loginKakao()"><svg viewBox="0 0 24 24"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.7 6.7L5.6 21.5c-.1.3.2.5.5.3l4.6-3.1c.4 0 .8.1 1.3.1 5.5 0 10-3.6 10-8S17.5 3 12 3z"/></svg>카카오로 로그인</button>
-    <div style="margin-top:10px"><button class="ghost" onclick="closeLogin()">나중에</button></div>
+    <button class="ghost" style="width:100%;margin-top:8px" onclick="openGuest()">게스트로 참여 (이름 + 전화번호)</button>
+    <div style="margin-top:10px"><button class="back" style="margin:0" onclick="closeLogin()">나중에</button></div>
+  </div>
+</div>
+
+<!-- 게스트 등록/로그인 -->
+<div class="modal" id="guestModal" onclick="if(event.target===this)closeGuest()">
+  <div class="sheet">
+    <div class="row"><strong>게스트로 참여</strong><button class="icon" onclick="closeGuest()">&times;</button></div>
+    <p class="muted" style="margin:4px 0 0">카카오 계정 없이 임시로 참여할 때 씁니다. 같은 이름과 전화번호로 다른 폰에서도 다시 로그인할 수 있어요. 전화번호는 운영진에게만 보입니다.</p>
+    <label>이름</label>
+    <input id="gName" maxlength="20" placeholder="예: 홍길동" autocomplete="name">
+    <label>전화번호</label>
+    <input id="gPhone" inputmode="numeric" placeholder="01012345678" autocomplete="tel" onkeydown="if(event.key==='Enter')guestAuth()">
+    <button class="primary" style="width:100%;margin-top:16px" onclick="guestAuth()">등록 또는 로그인</button>
   </div>
 </div>
 
@@ -335,8 +353,8 @@
     <div class="opts" id="optExp"></div>
     <label>성별</label>
     <div class="opts" id="optGender"></div>
-    <label>연령대 <span class="muted" style="font-weight:400">(운영진에게만 보입니다)</span></label>
-    <div class="opts" id="optAge"></div>
+    <label>생년 <span class="muted" style="font-weight:400">(뒤 두 자리, 운영진에게만 보입니다)</span></label>
+    <input id="fBirth" inputmode="numeric" maxlength="2" placeholder="예: 88" style="width:120px">
     <div style="margin-top:16px;display:flex;gap:8px;justify-content:space-between">
       <button class="danger" id="profileLeft" onclick="logout()">로그아웃</button>
       <button class="primary" onclick="saveProfile()">저장</button>
@@ -381,9 +399,11 @@ const todayStr = ymd(new Date());
 const DOW = ['일','월','화','수','목','금','토'];
 const EXP    = { '0-1':'1년 미만', '1-3':'1~3년', '3-5':'3~5년', '5+':'5년 이상' };
 const GENDER = { m:'남', f:'여' };
-const AGE    = { '20':'20대', '30':'30대', '40':'40대', '50':'50대', '60':'60대 이상' };
 const https  = u => u ? String(u).replace(/^http:\/\//, 'https://') : '';
-const complete = u => !!(u && u.experience && u.gender && u.age_group);
+const complete = u => !!(u && u.experience && u.gender && u.birth_year);
+const yy2year = yy => { const n = +yy; return n <= (new Date().getFullYear() % 100) ? 2000 + n : 1900 + n; };
+const born = y => y ? `${String(y).slice(2)}년생` : '';
+async function sha256(t){ const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
 
 const state = {
   year: new Date().getFullYear(),
@@ -469,19 +489,40 @@ async function logout(){
   if (error) return showError(error);
   toast('로그아웃했습니다');
 }
-const pick = { experience: null, gender: null, age_group: null };
+const pick = { experience: null, gender: null };
 function renderOpts(id, map, key){
   $(id).innerHTML = Object.entries(map).map(([v,l]) => `<button type="button" class="${pick[key]===v?'on':''}" onclick="pick.${key}='${v}';renderOpts('${id}',${key==='experience'?'EXP':key==='gender'?'GENDER':'AGE'},'${key}')">${l}</button>`).join('');
+}
+function openGuest(){ $('guestModal').classList.add('open'); setTimeout(()=>$('gName').focus(), 50); }
+function closeGuest(){ $('guestModal').classList.remove('open'); }
+async function guestAuth(){
+  const name = $('gName').value.trim();
+  const phone = $('gPhone').value.replace(/\D/g, '');
+  if (!name) return toast('이름을 입력하세요');
+  if (phone.length < 10 || phone.length > 11) return toast('전화번호를 확인하세요');
+  const email = `guest-${phone}@guest.bytennis.app`;
+  const password = await sha256(`${phone}:${name.replace(/\s/g,'')}:BY-TENNIS`);
+  const r = await db.auth.signInWithPassword({ email, password });
+  if (!r.error){ closeGuest(); closeLogin(); toast('게스트로 로그인했습니다'); return; }
+  if (!/invalid login credentials/i.test(r.error.message)) return showError(r.error);
+  const su = await db.auth.signUp({ email, password, options: { data: { name, phone, guest: true } } });
+  if (su.error){
+    if (/already registered|already exists/i.test(su.error.message)) return toast('이미 등록된 번호입니다. 등록할 때 쓴 이름을 입력하세요');
+    return showError(su.error);
+  }
+  if (!su.data.session) return toast('Supabase에서 Confirm email 설정을 꺼야 합니다');
+  closeGuest(); closeLogin(); toast('게스트로 등록했습니다');
 }
 function openProfile(onboard){
   if (!requireLogin()) return;
   const u = state.user;
   $('pAvatar').src = https(u.avatar_url); $('pAvatar').style.visibility = u.avatar_url ? 'visible' : 'hidden';
   $('pName').textContent = u.name;
-  $('pRole').textContent = isAdmin() ? '운영진' : '회원';
+  $('pRole').textContent = isAdmin() ? '운영진' : (u.is_guest ? '게스트' : '회원');
   $('fName').value = u.name; $('fAdminCode').value = '';
-  pick.experience = u.experience || null; pick.gender = u.gender || null; pick.age_group = u.age_group || null;
-  renderOpts('optExp', EXP, 'experience'); renderOpts('optGender', GENDER, 'gender'); renderOpts('optAge', AGE, 'age_group');
+  pick.experience = u.experience || null; pick.gender = u.gender || null;
+  renderOpts('optExp', EXP, 'experience'); renderOpts('optGender', GENDER, 'gender');
+  $('fBirth').value = u.birth_year ? String(u.birth_year).slice(2) : '';
   $('profileTitle').textContent = onboard ? '프로필을 완성해 주세요' : '내 정보';
   $('profileIntro').classList.toggle('hidden', !onboard);
   const left = $('profileLeft');
@@ -509,18 +550,25 @@ function closeProfile(){ $('profileModal').classList.remove('open'); }
 async function saveProfile(){
   const n = $('fName').value.trim();
   if (!n) return toast('이름을 입력하세요');
-  const row = { name: n, experience: pick.experience, gender: pick.gender, age_group: pick.age_group };
+  const yy = $('fBirth').value.trim();
+  if (yy && !/^\d{2}$/.test(yy)) return toast('생년은 뒤 두 자리만 입력하세요');
+  const row = { name: n, experience: pick.experience, gender: pick.gender, birth_year: yy ? yy2year(yy) : null };
   const { error } = await db.from('profiles').update(row).eq('id', myId());
   if (error) return showError(error);
   Object.assign(state.user, row); renderUser(); closeProfile(); toast('저장했습니다'); refreshView();
 }
+let phones = {};
 async function loadMembers(){
-  const { data, error } = await db.from('profiles').select('*').order('created_at');
+  const [{ data, error }, pv] = await Promise.all([
+    db.from('profiles').select('*').order('created_at'),
+    db.from('profile_private').select('id,phone')
+  ]);
   if (error) return showError(error);
+  phones = Object.fromEntries((pv.data||[]).map(r => [r.id, r.phone]));
   $('members').innerHTML = data.map(p => `
     <div class="member">
       ${p.avatar_url ? `<img src="${esc(https(p.avatar_url))}" alt="">` : '<img alt="">'}
-      <div class="nm">${esc(p.name)}${p.role==='admin' ? '<span class="adminBadge">운영진</span>' : ''}<div class="muted" style="font-size:12px">${[EXP[p.experience], GENDER[p.gender], AGE[p.age_group]].filter(Boolean).join(' · ') || '프로필 미입력'}</div></div>
+      <div class="nm">${esc(p.name)}${p.role==='admin' ? '<span class="adminBadge">운영진</span>' : ''}${p.is_guest ? '<span class="adminBadge" style="background:#e0f2fe;color:#075985">게스트</span>' : ''}<div class="muted" style="font-size:12px">${[EXP[p.experience], GENDER[p.gender], born(p.birth_year), phones[p.id]].filter(Boolean).join(' · ') || '프로필 미입력'}</div></div>
       ${p.id === myId() ? '<span class="muted">나</span>' :
         `<button class="ghost" style="min-height:32px;padding:4px 10px" onclick="setRole('${p.id}','${p.role==='admin'?'member':'admin'}')">${p.role==='admin'?'운영진 해제':'운영진 지정'}</button>`}
     </div>`).join('') || '<p class="muted">회원이 없습니다.</p>';
@@ -670,6 +718,8 @@ async function loadHome(){
   const sv = localStorage.getItem('startView') || 'home';
   document.querySelectorAll('#startSeg button').forEach(b => b.classList.toggle('active', b.dataset.v===sv));
   $('profileNotice').classList.toggle('hidden', !state.user || complete(state.user));
+  $('logoutRow').classList.toggle('hidden', !state.user);
+  if (state.user) $('logoutWho').textContent = `${state.user.name} (${state.user.is_guest ? '게스트' : '카카오'})`;
   $('adminCard').classList.toggle('hidden', !isAdmin());
   if (isAdmin()) loadMembers();
 }
