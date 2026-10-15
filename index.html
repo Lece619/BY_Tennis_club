@@ -377,7 +377,7 @@
   <!-- 관리자 페이지 -->
   <section id="viewAdmin" class="hidden">
     <div class="card">
-      <div class="row"><strong>승인 대기</strong><span class="muted" id="pendingCount"></span></div>
+      <div class="row"><strong>승인 대기 <span class="muted" id="pendingCount" style="font-weight:500"></span></strong><button class="ghost" style="min-height:32px;padding:4px 10px;font-size:13px" onclick="loadAdmin()">새로고침</button></div>
       <div class="muted">새로 가입한 계정입니다. 승인하면 게스트로 모임에 참가할 수 있고, 회원 목록에서 "회원으로" 올리면 자유 모임도 만들 수 있습니다.</div>
       <div id="pending" style="margin-top:6px"></div>
     </div>
@@ -728,6 +728,36 @@ function refreshView(){
   if (state.view === 'detail' && state.current) openDetail(state.current.id);
   else showView(state.view);
 }
+let pollTimer = null;
+async function refreshUser(){
+  if (!state.user) return false;
+  const { data } = await db.from('profiles').select('role,status,is_guest,name,show_crown').eq('id', myId()).maybeSingle();
+  if (!data) return false;
+  const changed = data.status !== state.user.status || data.role !== state.user.role || data.is_guest !== state.user.is_guest;
+  Object.assign(state.user, data); renderUser();
+  return changed;
+}
+async function manualRefresh(){
+  const changed = await refreshUser();
+  if (changed && approved()) toast('가입이 승인됐어요!'); else if (!changed) toast('아직 승인 전이에요');
+  refreshView();
+}
+function watchApproval(){
+  clearInterval(pollTimer); pollTimer = null;
+  if (!state.user || approved()) return;
+  pollTimer = setInterval(async () => {
+    if (document.hidden) return;
+    if (await refreshUser()){
+      clearInterval(pollTimer); pollTimer = null;
+      if (approved()) toast('가입이 승인됐어요! 이제 모임에 참가할 수 있어요');
+      refreshView();
+    }
+  }, 20000);
+}
+document.addEventListener('visibilitychange', async () => {
+  if (document.hidden || !state.user) return;
+  if (await refreshUser()) refreshView();
+});
 let afterLogin = null;
 function requireLogin(next){
   if (state.user) return true;
@@ -1314,10 +1344,12 @@ async function loadHome(){
   const an = $('approvalNotice');
   if (state.user && !approved()){
     an.classList.remove('hidden');
-    an.innerHTML = state.user.status === 'blocked'
+    an.innerHTML = (state.user.status === 'blocked'
       ? '<span>휴식 상태예요. 다시 활동하려면 관리자에게 말씀해 주세요.</span>'
-      : '<span>가입 승인 대기 중이에요. 관리자가 승인하면 모임에 참가할 수 있어요. 승인됐다고 들었으면 화면을 아래로 당겨 새로고침하세요.</span>';
-  } else an.classList.add('hidden');
+      : '<span>가입 승인 대기 중이에요. 관리자가 승인하면 자동으로 바뀌어요.</span>')
+      + `<button class="ghost" style="min-height:32px;padding:4px 10px;font-size:13px;white-space:nowrap" onclick="event.stopPropagation();manualRefresh()">새로고침</button>`;
+    watchApproval();
+  } else { an.classList.add('hidden'); clearInterval(pollTimer); pollTimer = null; }
 }
 
 // ===== 상세 =====
