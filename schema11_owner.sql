@@ -115,6 +115,9 @@ grant execute on function claim_owner(text), transfer_owner(uuid), set_owner_cod
 revoke execute on function claim_owner(text), transfer_owner(uuid), set_owner_code(text), delete_member(uuid) from anon;
 
 -- 9) 첫 대표: 가장 먼저 가입한 카카오 회원 (대표가 아직 없을 때만)
+--    보호 규칙(역할 변경은 대표만)을 잠시 풀고 실행
+select set_config('app.claim_admin', 'on', false);
 update profiles set role = 'owner', status = 'approved'
 where id = (select id from profiles where not is_guest order by created_at limit 1)
   and not exists (select 1 from profiles where role = 'owner');
+select set_config('app.claim_admin', 'off', false);
