@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>테니스 모임</title>
+<style>
+  :root{
+    --bg:#f4f6f3; --card:#ffffff; --text:#1d2a1f; --muted:#6b7a6e; --line:#dfe6e0;
+    --accent:#2e8b57; --accent-soft:#e3f3ea; --danger:#c0392b; --regular:#3b6fd8; --flash:#e08a1e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;background:var(--bg);color:var(--text);line-height:1.45}
+  header{background:var(--accent);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;z-index:5}
+  header h1{margin:0;font-size:18px;cursor:pointer}
+  .chip{background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+  main{max-width:720px;margin:0 auto;padding:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  button.primary{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:15px;cursor:pointer}
+  button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:10px;padding:8px 14px;font-size:14px;cursor:pointer}
+  button.danger{background:transparent;color:var(--danger);border:1px solid var(--danger);border-radius:10px;padding:8px 14px;font-size:14px;cursor:pointer}
+  button.icon{background:transparent;border:none;font-size:20px;cursor:pointer;color:var(--text);padding:4px 10px}
+  button:disabled{opacity:.5;cursor:default}
+  .muted{color:var(--muted);font-size:13px}
+  /* calendar */
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .cal-head strong{font-size:17px}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .cal .dow{text-align:center;font-size:12px;color:var(--muted);padding:4px 0}
+  .cal .day{min-height:58px;border:1px solid var(--line);border-radius:8px;padding:4px;cursor:pointer;background:var(--card);display:flex;flex-direction:column;gap:2px;overflow:hidden}
+  .cal .day.other{opacity:.35}
+  .cal .day.today{border-color:var(--accent)}
+  .cal .day.selected{background:var(--accent-soft);border-color:var(--accent)}
+  .cal .day .n{font-size:12px}
+  .cal .day .n.sun{color:var(--danger)}
+  .cal .day .n.sat{color:var(--regular)}
+  .cal .tag{font-size:10px;border-radius:4px;padding:1px 4px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tag.regular{background:var(--regular)} .tag.flash{background:var(--flash)}
+  .badge{display:inline-block;font-size:11px;border-radius:4px;padding:2px 6px;color:#fff;margin-right:6px;vertical-align:middle}
+  .badge.regular{background:var(--regular)} .badge.flash{background:var(--flash)}
+  .item{padding:10px 0;border-top:1px solid var(--line);cursor:pointer}
+  .item:first-of-type{border-top:none}
+  .item .title{font-weight:600}
+  /* participants */
+  .people{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .person{background:var(--accent-soft);border-radius:999px;padding:4px 10px;font-size:13px}
+  .person.me{background:var(--accent);color:#fff}
+  /* bracket */
+  .round{margin-top:10px}
+  .round h4{margin:6px 0}
+  .match{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:6px;font-size:14px}
+  .match .team{text-align:center}
+  .match .score{display:flex;align-items:center;gap:4px}
+  .match input{width:40px;text-align:center;font-size:15px;padding:4px;border:1px solid var(--line);border-radius:6px}
+  .match.done{background:var(--accent-soft)}
+  .rest{font-size:13px;color:var(--muted)}
+  /* form */
+  label{display:block;font-size:13px;color:var(--muted);margin-top:10px}
+  input,select,textarea{width:100%;font-size:15px;padding:9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--text)}
+  textarea{min-height:60px;resize:vertical}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:flex-end;justify-content:center;z-index:10}
+  .modal.open{display:flex}
+  .sheet{background:var(--card);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:18px;max-height:92vh;overflow:auto}
+  @media(min-width:600px){.modal{align-items:center}.sheet{border-radius:16px}}
+  .banner{background:#fff3cd;border:1px solid #ffe08a;color:#6b4e00;padding:10px 12px;border-radius:10px;margin-bottom:12px;font-size:14px}
+  .banner code{background:#fff;padding:1px 4px;border-radius:4px}
+  .hidden{display:none !important}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:20}
+  .toast.show{opacity:1}
+  table.st{width:100%;border-collapse:collapse;font-size:14px}
+  table.st th{text-align:center;font-weight:500}
+  table.st th:first-child{text-align:left}
+  table.st td{padding:4px 0;border-top:1px solid var(--line);text-align:center}
+  table.st td:first-child{text-align:left}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="clubName" onclick="showCalendar()">테니스 모임</h1>
+  <div>
+    <button class="chip" id="nameChip" onclick="askName(true)">이름 설정</button>
+  </div>
+</header>
+
+<main>
+  <div id="banner" class="banner hidden"></div>
+
+  <!-- 달력 화면 -->
+  <section id="viewCalendar">
+    <div class="card">
+      <div class="cal-head">
+        <button class="icon" onclick="moveMonth(-1)">&lsaquo;</button>
+        <strong id="monthLabel"></strong>
+        <button class="icon" onclick="moveMonth(1)">&rsaquo;</button>
+      </div>
+      <div class="cal" id="calGrid"></div>
+      <div class="row" style="margin-top:10px">
+        <span class="muted"><span class="badge regular">정기</span><span class="badge flash">번개</span></span>
+        <button class="ghost" onclick="goToday()">오늘</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <strong id="dayLabel"></strong>
+        <button class="primary" onclick="openCreate()">+ 모임 만들기</button>
+      </div>
+      <div id="dayList"></div>
+    </div>
+  </section>
+
+  <!-- 모임 상세 화면 -->
+  <section id="viewDetail" class="hidden">
+    <button class="ghost" onclick="showCalendar()" style="margin-bottom:10px">&lsaquo; 달력으로</button>
+    <div class="card" id="detailInfo"></div>
+    <div class="card">
+      <div class="row"><strong>참가자 <span id="pCount" class="muted"></span></strong>
+        <button class="primary" id="joinBtn" onclick="toggleJoin()">참가</button></div>
+      <div class="people" id="people"></div>
+    </div>
+    <div class="card">
+      <div class="row"><strong>대진표</strong>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="rounds" style="width:auto">
+            <option value="1">1라운드</option><option value="2">2라운드</option><option value="3" selected>3라운드</option>
+            <option value="4">4라운드</option><option value="5">5라운드</option><option value="6">6라운드</option>
+          </select>
+          <button class="ghost" id="genBtn" onclick="generateBracket()">대진 생성</button>
+        </div>
+      </div>
+      <p class="muted" id="bracketHint"></p>
+      <div id="bracket"></div>
+      <div id="standings"></div>
+    </div>
+    <div class="row" style="justify-content:flex-end;margin-bottom:30px">
+      <button class="danger" id="deleteBtn" onclick="deleteMeetup()">모임 삭제</button>
+    </div>
+  </section>
+</main>
+
+<!-- 모임 생성 -->
+<div class="modal" id="createModal" onclick="if(event.target===this)closeCreate()">
+  <div class="sheet">
+    <div class="row"><strong>모임 만들기</strong><button class="icon" onclick="closeCreate()">&times;</button></div>
+    <label>종류</label>
+    <select id="fKind"><option value="flash">번개</option><option value="regular">정기 모임</option></select>
+    <label>제목</label>
+    <input id="fTitle" placeholder="예: 토요일 아침 번개">
+    <div class="two">
+      <div><label>날짜</label><input id="fDate" type="date"></div>
+      <div><label>시작 시간</label><input id="fTime" type="time" value="10:00"></div>
+    </div>
+    <label>장소</label>
+    <input id="fLocation" placeholder="예: OO테니스장 3번 코트">
+    <div class="two">
+      <div><label>코트 수</label><input id="fCourts" type="number" min="1" value="1"></div>
+      <div><label>정원</label><input id="fCapacity" type="number" min="2" value="8"></div>
+    </div>
+    <label>메모</label>
+    <textarea id="fNote" placeholder="회비, 준비물 등"></textarea>
+    <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="ghost" onclick="closeCreate()">취소</button>
+      <button class="primary" onclick="submitCreate()">만들기</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+// ===== 설정 =====
+const CLUB_NAME    = '테니스 모임';
+const SUPABASE_URL = 'https://wzjoiitmujirjtliwwjg.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_aopxcBhoftCxz9Q73zX9og_XKtwDJ-3';
+// ===============
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+document.getElementById('clubName').textContent = CLUB_NAME;
+document.title = CLUB_NAME;
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const todayStr = ymd(new Date());
+const DOW = ['일','월','화','수','목','금','토'];
+
+const state = {
+  year: new Date().getFullYear(),
+  month: new Date().getMonth(),   // 0-based
+  selected: todayStr,
+  meetups: [],                    // 이번 달 모임
+  current: null,                  // 상세 보고 있는 모임
+  myName: localStorage.getItem('myName') || ''
+};
+
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
+function showError(e){
+  console.error(e);
+  const msg = (e && e.message) || String(e);
+  if (/schema cache|does not exist|relation/.test(msg)) {
+    $('banner').innerHTML = '테이블이 아직 없습니다. Supabase 대시보드 → SQL Editor 에서 <code>schema.sql</code> 내용을 실행해 주세요.';
+    $('banner').classList.remove('hidden');
+  } else toast('오류: ' + msg);
+}
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtDate(s){ const [y,m,d]=s.split('-'); const dt=new Date(+y,m-1,+d); return `${+m}월 ${+d}일 (${DOW[dt.getDay()]})`; }
+function fmtTime(t){ return t ? t.slice(0,5) : ''; }
+
+// ===== 이름 =====
+function renderName(){ $('nameChip').textContent = state.myName ? state.myName : '이름 설정'; }
+function askName(force){
+  if (state.myName && !force) return true;
+  const n = prompt('본인 이름(닉네임)을 입력하세요', state.myName || '');
+  if (n && n.trim()) {
+    state.myName = n.trim(); localStorage.setItem('myName', state.myName); renderName();
+    if (state.current) renderDetail();
+    return true;
+  }
+  return !!state.myName;
+}
+
+// ===== 달력 =====
+async function loadMonth(){
+  const first = new Date(state.year, state.month, 1);
+  const last  = new Date(state.year, state.month+1, 0);
+  const { data, error } = await db.from('meetups')
+    .select('*, participants(count)')
+    .gte('date', ymd(first)).lte('date', ymd(last))
+    .order('date').order('start_time');
+  if (error) showError(error); else $('banner').classList.add('hidden');
+  state.meetups = data || [];
+  renderCalendar(); renderDayList();
+}
+function moveMonth(d){ const m = new Date(state.year, state.month + d, 1); state.year = m.getFullYear(); state.month = m.getMonth(); loadMonth(); }
+function goToday(){ const t=new Date(); state.year=t.getFullYear(); state.month=t.getMonth(); state.selected=todayStr; loadMonth(); }
+
+function renderCalendar(){
+  $('monthLabel').textContent = `${state.year}년 ${state.month+1}월`;
+  const grid = $('calGrid'); grid.innerHTML = '';
+  DOW.forEach(d => { const e=document.createElement('div'); e.className='dow'; e.textContent=d; grid.appendChild(e); });
+  const first = new Date(state.year, state.month, 1);
+  const start = new Date(first); start.setDate(1 - first.getDay());
+  const last = new Date(state.year, state.month+1, 0);
+  const weeks = Math.ceil((first.getDay() + last.getDate()) / 7);
+  for (let i=0; i<weeks*7; i++){
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const s = ymd(d);
+    const cell = document.createElement('div');
+    cell.className = 'day' + (d.getMonth()!==state.month?' other':'') + (s===todayStr?' today':'') + (s===state.selected?' selected':'');
+    const n = document.createElement('div');
+    n.className = 'n' + (d.getDay()===0?' sun':d.getDay()===6?' sat':'');
+    n.textContent = d.getDate(); cell.appendChild(n);
+    state.meetups.filter(m=>m.date===s).slice(0,3).forEach(m=>{
+      const t=document.createElement('div'); t.className='tag '+m.kind; t.textContent=m.title; cell.appendChild(t);
+    });
+    cell.onclick = () => {
+      state.selected = s;
+      if (d.getMonth()!==state.month){ state.year=d.getFullYear(); state.month=d.getMonth(); loadMonth(); }
+      else { renderCalendar(); renderDayList(); }
+    };
+    grid.appendChild(cell);
+  }
+}
+
+function renderDayList(){
+  $('dayLabel').textContent = fmtDate(state.selected);
+  const list = state.meetups.filter(m=>m.date===state.selected);
+  const box = $('dayList');
+  if (!list.length){ box.innerHTML = '<p class="muted">이 날은 모임이 없습니다.</p>'; return; }
+  box.innerHTML = list.map(m => `
+    <div class="item" onclick="openDetail('${m.id}')">
+      <div class="title"><span class="badge ${m.kind}">${m.kind==='regular'?'정기':'번개'}</span>${esc(m.title)}</div>
+      <div class="muted">${fmtTime(m.start_time)} · ${esc(m.location||'장소 미정')} · ${m.participants?.[0]?.count||0}/${m.capacity}명</div>
+    </div>`).join('');
+}
+
+// ===== 모임 생성 =====
+function openCreate(){ if(!askName()) return; $('fDate').value = state.selected; $('createModal').classList.add('open'); $('fTitle').focus(); }
+function closeCreate(){ $('createModal').classList.remove('open'); }
+async function submitCreate(){
+  const row = {
+    kind: $('fKind').value, title: $('fTitle').value.trim(), date: $('fDate').value,
+    start_time: $('fTime').value || null, location: $('fLocation').value.trim() || null,
+    courts: +$('fCourts').value || 1, capacity: +$('fCapacity').value || 8,
+    note: $('fNote').value.trim() || null, created_by: state.myName
+  };
+  if (!row.title || !row.date) return toast('제목과 날짜를 입력하세요');
+  const { data, error } = await db.from('meetups').insert(row).select().single();
+  if (error) return showError(error);
+  await db.from('participants').insert({ meetup_id: data.id, name: state.myName }); // 만든 사람 자동 참가
+  closeCreate(); $('fTitle').value=''; $('fLocation').value=''; $('fNote').value='';
+  state.selected = row.date;
+  const [y,m] = row.date.split('-'); state.year=+y; state.month=m-1;
+  toast('모임을 만들었습니다'); loadMonth();
+}
+
+// ===== 상세 =====
+function showCalendar(){ state.current=null; $('viewDetail').classList.add('hidden'); $('viewCalendar').classList.remove('hidden'); loadMonth(); }
+async function openDetail(id){
+  const { data, error } = await db.from('meetups').select('*, participants(*), matches(*)').eq('id', id).single();
+  if (error) return showError(error);
+  data.participants.sort((a,b)=>a.created_at.localeCompare(b.created_at));
+  data.matches.sort((a,b)=>a.round-b.round || a.court-b.court);
+  state.current = data;
+  $('viewCalendar').classList.add('hidden'); $('viewDetail').classList.remove('hidden');
+  window.scrollTo(0,0);
+  renderDetail();
+}
+function renderDetail(){
+  const m = state.current;
+  $('detailInfo').innerHTML = `
+    <div style="font-size:18px;font-weight:700"><span class="badge ${m.kind}">${m.kind==='regular'?'정기':'번개'}</span>${esc(m.title)}</div>
+    <div style="margin-top:6px">📅 ${fmtDate(m.date)} ${fmtTime(m.start_time)}</div>
+    <div>📍 ${esc(m.location||'장소 미정')}</div>
+    <div>🎾 코트 ${m.courts}면 · 정원 ${m.capacity}명</div>
+    ${m.note?`<div style="margin-top:6px;white-space:pre-wrap">${esc(m.note)}</div>`:''}
+    <div class="muted" style="margin-top:6px">만든 사람: ${esc(m.created_by||'-')}</div>`;
+  const names = m.participants.map(p=>p.name);
+  $('pCount').textContent = `${names.length}/${m.capacity}`;
+  $('people').innerHTML = names.length
+    ? names.map(n=>`<span class="person ${n===state.myName?'me':''}">${esc(n)}</span>`).join('')
+    : '<span class="muted">아직 없음</span>';
+  const joined = names.includes(state.myName);
+  $('joinBtn').textContent = joined ? '참가 취소' : '참가';
+  $('joinBtn').className = joined ? 'ghost' : 'primary';
+  $('joinBtn').disabled = !joined && names.length >= m.capacity;
+  $('deleteBtn').classList.toggle('hidden', m.created_by !== state.myName);
+  $('genBtn').disabled = names.length < 4;
+  $('bracketHint').textContent = names.length < 4
+    ? '참가자가 4명 이상이면 복식 대진을 만들 수 있습니다.'
+    : (m.matches.length ? '점수를 입력하면 자동 저장됩니다. 다시 생성하면 기존 대진은 지워집니다.' : '라운드 수를 고르고 대진 생성을 누르세요.');
+  renderBracket();
+}
+async function toggleJoin(){
+  if(!askName()) return;
+  const m = state.current;
+  const mine = m.participants.find(p=>p.name===state.myName);
+  const { error } = mine
+    ? await db.from('participants').delete().eq('id', mine.id)
+    : await db.from('participants').insert({ meetup_id: m.id, name: state.myName });
+  if (error) return showError(error);
+  toast(mine ? '참가를 취소했습니다' : '참가했습니다');
+  openDetail(m.id);
+}
+async function deleteMeetup(){
+  if (!confirm('이 모임을 삭제할까요? 참가자와 대진도 함께 지워집니다.')) return;
+  const { error } = await db.from('meetups').delete().eq('id', state.current.id);
+  if (error) return showError(error);
+  toast('삭제했습니다'); showCalendar();
+}
+
+// ===== 대진 =====
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+const pairKey = (a,b) => [a,b].sort().join('|');
+
+async function generateBracket(){
+  const m = state.current;
+  const players = m.participants.map(p=>p.name);
+  if (players.length < 4) return;
+  if (m.matches.length && !confirm('기존 대진표를 지우고 새로 만들까요?')) return;
+  const rounds = +$('rounds').value;
+  const courts = Math.max(1, Math.min(m.courts, Math.floor(players.length/4)));
+  const played = Object.fromEntries(players.map(p=>[p,0]));
+  const partnered = {};   // 같은 파트너 반복 줄이기용 카운트
+  const rows = [];
+  for (let r=1; r<=rounds; r++){
+    // 적게 뛴 사람 우선, 동률은 랜덤
+    const order = shuffle(players.slice()).sort((a,b)=>played[a]-played[b]);
+    const playing = order.slice(0, courts*4);
+    for (let c=0; c<courts; c++){
+      const four = playing.slice(c*4, c*4+4);
+      // 세 가지 팀 분할 중 파트너 반복이 가장 적은 것 선택
+      const splits = shuffle([[[0,1],[2,3]],[[0,2],[1,3]],[[0,3],[1,2]]]);
+      let best=splits[0], bestScore=Infinity;
+      splits.forEach(s=>{
+        const sc = (partnered[pairKey(four[s[0][0]],four[s[0][1]])]||0) + (partnered[pairKey(four[s[1][0]],four[s[1][1]])]||0);
+        if (sc<bestScore){ bestScore=sc; best=s; }
+      });
+      const ta=[four[best[0][0]],four[best[0][1]]], tb=[four[best[1][0]],four[best[1][1]]];
+      partnered[pairKey(...ta)] = (partnered[pairKey(...ta)]||0)+1;
+      partnered[pairKey(...tb)] = (partnered[pairKey(...tb)]||0)+1;
+      four.forEach(p=>played[p]++);
+      rows.push({ meetup_id: m.id, round: r, court: c+1, team_a: ta, team_b: tb });
+    }
+  }
+  let res = await db.from('matches').delete().eq('meetup_id', m.id);
+  if (res.error) return showError(res.error);
+  res = await db.from('matches').insert(rows);
+  if (res.error) return showError(res.error);
+  toast('대진표를 만들었습니다'); openDetail(m.id);
+}
+
+function renderBracket(){
+  const m = state.current;
+  const box = $('bracket'); box.innerHTML = '';
+  if (!m.matches.length){ $('standings').innerHTML=''; return; }
+  const players = m.participants.map(p=>p.name);
+  const rounds = [...new Set(m.matches.map(x=>x.round))];
+  rounds.forEach(r=>{
+    const ms = m.matches.filter(x=>x.round===r);
+    const playing = new Set(ms.flatMap(x=>[...x.team_a,...x.team_b]));
+    const rest = players.filter(p=>!playing.has(p));
+    const div = document.createElement('div'); div.className='round';
+    div.innerHTML = `<h4>${r}라운드</h4>` + ms.map(x=>`
+      <div class="match ${x.score_a!=null&&x.score_b!=null?'done':''}">
+        <div class="team">${x.team_a.map(esc).join(' · ')}</div>
+        <div class="score">
+          <input type="number" min="0" value="${x.score_a??''}" onchange="saveScore('${x.id}','score_a',this.value)">
+          <span>:</span>
+          <input type="number" min="0" value="${x.score_b??''}" onchange="saveScore('${x.id}','score_b',this.value)">
+        </div>
+        <div class="team">${x.team_b.map(esc).join(' · ')}</div>
+        <div class="muted" style="grid-column:1/-1;text-align:center;font-size:11px">${x.court}번 코트</div>
+      </div>`).join('') + (rest.length?`<div class="rest">휴식: ${rest.map(esc).join(', ')}</div>`:'');
+    box.appendChild(div);
+  });
+  renderStandings();
+}
+async function saveScore(id, field, val){
+  const v = val==='' ? null : +val;
+  const { error } = await db.from('matches').update({ [field]: v }).eq('id', id);
+  if (error) return showError(error);
+  const mt = state.current.matches.find(x=>x.id===id); mt[field]=v;
+  renderBracket();
+}
+function renderStandings(){
+  const m = state.current;
+  const st = {};
+  const get = p => st[p] || (st[p] = {w:0,l:0,gf:0,ga:0});
+  m.matches.filter(x=>x.score_a!=null&&x.score_b!=null).forEach(x=>{
+    const aw = x.score_a>x.score_b, bw = x.score_b>x.score_a;
+    x.team_a.forEach(p=>{ const s=get(p); s.gf+=x.score_a; s.ga+=x.score_b; if(aw)s.w++; if(bw)s.l++; });
+    x.team_b.forEach(p=>{ const s=get(p); s.gf+=x.score_b; s.ga+=x.score_a; if(bw)s.w++; if(aw)s.l++; });
+  });
+  const rows = Object.entries(st).sort((a,b)=>b[1].w-a[1].w || (b[1].gf-b[1].ga)-(a[1].gf-a[1].ga));
+  $('standings').innerHTML = rows.length ? `<h4 style="margin:14px 0 6px">결과</h4>
+    <table class="st">
+      <tr class="muted"><th>이름</th><th>승</th><th>패</th><th>득실</th></tr>
+      ${rows.map(([n,s])=>{ const d=s.gf-s.ga; return `<tr><td>${esc(n)}</td><td>${s.w}</td><td>${s.l}</td><td>${d>0?'+':''}${d}</td></tr>`; }).join('')}
+    </table>` : '';
+}
+
+// ===== 시작 =====
+renderName();
+loadMonth();
+</script>
+</body>
+</html>
