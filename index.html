@@ -539,8 +539,12 @@ const crown     = pr => (pr && pr.role === 'owner' && pr.show_crown !== false) ?
 const canManage = m  => !!state.user && (isAdmin() || m.created_by_id === state.user.id);   // 관리자 또는 모임 주최자
 const myId      = () => state.user ? state.user.id : null;
 const approved  = () => !!state.user && (isAdmin() || state.user.status === 'approved');
-function requireApproved(){
+async function requireApproved(){
   if (approved()) return true;
+  // 승인 전에 열어 둔 화면일 수 있으니 서버에서 상태를 다시 확인
+  const { data } = await db.from('profiles').select('role,status,is_guest').eq('id', myId()).maybeSingle();
+  if (data){ Object.assign(state.user, data); renderUser(); }
+  if (approved()){ loadHome(); return true; }
   toast(state.user && state.user.status === 'blocked' ? '휴식 상태라 참가할 수 없어요' : '관리자 승인 후 이용할 수 있어요');
   return false;
 }
@@ -849,9 +853,9 @@ function renderDayList(){
 }
 
 // ===== 모임 생성 =====
-function openCreate(){
+async function openCreate(){
   if(!requireLogin(openCreate)) return;
-  if (!requireApproved()) return;
+  if (!(await requireApproved())) return;
   if (state.user.is_guest) return toast('모임 만들기는 회원만 할 수 있어요');
   const kinds = isAdmin() ? ['flash','regular'] : ['flash'];
   $('fKind').innerHTML = kinds.map(k => `<option value="${k}">${KIND[k]}</option>`).join('');
@@ -987,7 +991,7 @@ async function loadHome(){
     an.classList.remove('hidden');
     an.innerHTML = state.user.status === 'blocked'
       ? '<span>휴식 상태예요. 다시 활동하려면 관리자에게 말씀해 주세요.</span>'
-      : '<span>가입 승인 대기 중이에요. 관리자가 승인하면 모임에 참가할 수 있어요.</span>';
+      : '<span>가입 승인 대기 중이에요. 관리자가 승인하면 모임에 참가할 수 있어요. 승인됐다고 들었으면 화면을 아래로 당겨 새로고침하세요.</span>';
   } else an.classList.add('hidden');
 }
 
@@ -1041,7 +1045,7 @@ async function toggleJoin(){
   if(!requireLogin(toggleJoin)) return;
   const m = state.current;
   const mine = m.participants.find(p=>p.user_id===myId());
-  if (!mine && !requireApproved()) return;
+  if (!mine && !(await requireApproved())) return;
   const { error } = mine
     ? await db.from('participants').delete().eq('id', mine.id)
     : await db.from('participants').insert({ meetup_id: m.id, user_id: myId(), name: state.user.name });
