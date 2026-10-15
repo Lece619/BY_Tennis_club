@@ -167,7 +167,7 @@
   .banner{background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:10px 12px;border-radius:12px;margin-bottom:12px;font-size:14px}
   .banner code{background:#fff;padding:1px 4px;border-radius:4px}
   .hidden{display:none !important}
-  .toast{position:fixed;bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;transition:.2s;pointer-events:none;z-index:20;white-space:nowrap}
+  .toast{position:fixed;bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 18px;border-radius:16px;font-size:14px;font-weight:600;opacity:0;transition:.2s;pointer-events:none;z-index:20;max-width:calc(100% - 32px);text-align:center}
   .toast.show{opacity:1}
   /* 좁은 화면(폰) */
   @media(max-width:480px){
@@ -371,6 +371,7 @@
     </div>
     <label>닉네임 (모임에서 보이는 이름)</label>
     <input id="fName" maxlength="20" placeholder="예: 홍길동" onkeydown="if(event.key==='Enter')saveProfile()">
+    <div class="muted">다른 회원과 같은 닉네임은 쓸 수 없어요.</div>
     <label>구력</label>
     <div class="opts" id="optExp"></div>
     <label>성별</label>
@@ -461,7 +462,7 @@ const state = {
   displayFormat: 'name'           // 관리자이 정한 이름 표시 방식
 };
 
-function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), Math.max(1800, msg.length*70)); }
 function showError(e){
   console.error(e);
   const msg = (e && e.message) || String(e);
@@ -557,7 +558,10 @@ async function guestAuth(){
     return showError(su.error);
   }
   if (!su.data.session) return toast('Supabase에서 Confirm email 설정을 꺼야 합니다');
-  closeGuest(); closeLogin(); toast('게스트로 등록했습니다');
+  closeGuest(); closeLogin();
+  const pr = await db.from('profiles').select('name').eq('id', su.data.user.id).maybeSingle();
+  if (pr.data && pr.data.name !== name) toast(`같은 닉네임이 있어 '${pr.data.name}'(으)로 등록됐어요. 내 정보에서 바꿀 수 있어요`);
+  else toast('게스트로 등록했습니다');
 }
 function openProfile(onboard){
   if (!requireLogin()) return;
@@ -601,8 +605,12 @@ async function saveProfile(){
   const yy = $('fBirth').value.trim();
   if (yy && !/^\d{2}$/.test(yy)) return toast('생년은 뒤 두 자리만 입력하세요');
   const row = { name: n, experience: pick.experience, gender: pick.gender, birth_year: yy ? yy2year(yy) : null };
+  if (n.toLowerCase() !== (state.user.name||'').toLowerCase()){
+    const chk = await db.rpc('name_available', { candidate: n });
+    if (!chk.error && chk.data === false) return toast('이미 사용 중인 닉네임이에요');
+  }
   const { error } = await db.from('profiles').update(row).eq('id', myId());
-  if (error) return showError(error);
+  if (error) return /duplicate|unique/i.test(error.message) ? toast('이미 사용 중인 닉네임이에요') : showError(error);
   Object.assign(state.user, row); renderUser(); closeProfile(); toast('저장했습니다'); refreshView();
 }
 let phones = {};
