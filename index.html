@@ -22,7 +22,15 @@
     --nav-h:62px;
   }
   *{box-sizing:border-box}
-  html{-webkit-text-size-adjust:100%}
+  html{-webkit-text-size-adjust:100%;scrollbar-gutter:stable;overflow-y:scroll}
+  @media(hover:hover){
+    .up:hover,.item:hover,.link:hover,.cal .day:hover{background:var(--soft)}
+    .cal .day.selected:hover{background:#fff}
+    button.ghost:hover{background:var(--line)}
+    button.primary:hover{background:var(--accent-dark)}
+    .tabs button:hover{color:var(--text)}
+    .tabs button.active:hover{color:var(--accent)}
+  }
   body{margin:0;font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;background:var(--bg);color:var(--text);line-height:1.5;letter-spacing:-.01em}
   button{font-family:inherit}
   /* top bar */
@@ -733,9 +741,18 @@ function renderUser(){
     : '<span>카카오 로그인</span>';
 }
 function refreshView(){
-  if (state.view === 'detail' && state.current) openDetail(state.current.id);
-  else showView(state.view);
+  if (state.view === 'detail' && state.current) openDetail(state.current.id, true);
+  else showView(state.view, { pop: true });
 }
+window.addEventListener('popstate', e => {
+  const st = e.state;
+  // 열려 있는 창이 있으면 뒤로가기로 창만 닫기
+  const openModal = document.querySelector('.modal.open');
+  if (openModal){ openModal.classList.remove('open'); history.pushState(st || { view: state.view }, ''); return; }
+  if (!st) return showView('home', { pop: true });
+  if (st.view === 'detail' && st.id) openDetail(st.id, true);
+  else showView(st.view || 'home', { pop: true });
+});
 let pollTimer = null;
 async function refreshUser(){
   if (!state.user) return false;
@@ -1130,8 +1147,13 @@ async function submitCreate(){
 
 // ===== 상세 =====
 // ===== 화면 전환 =====
-function showView(name){
+function showView(name, opts){
   if (name === 'admin' && !isAdmin()) name = 'home';
+  const pop = opts && opts.pop;
+  if (!pop){
+    const same = name === state.view && name !== 'detail';
+    (same ? history.replaceState : history.pushState).call(history, { view: name }, '');
+  }
   state.current = null;
   state.view = name;
   if (name !== 'detail' && name !== 'notices') state.prevView = name;
@@ -1374,7 +1396,7 @@ async function loadHome(){
 }
 
 // ===== 상세 =====
-async function openDetail(id){
+async function openDetail(id, pop){
   await loadSettings();   // 다른 기기에서 바꾼 이름 표시 방식 반영
   const { data, error } = await db.from('meetups').select('*, host:profiles!meetups_created_by_profile_fk(name,experience,gender,birth_year,role,show_crown), participants(*, profiles(name,experience,gender,birth_year,role,show_crown,is_guest)), matches(*)').eq('id', id).single();
   if (error) return showError(error);
@@ -1382,7 +1404,8 @@ async function openDetail(id){
   data.pending = data.participants.filter(p => p.status === 'pending');
   data.participants = data.participants.filter(p => p.status !== 'pending');
   data.matches.sort((a,b)=>a.round-b.round || a.court-b.court);
-  showView('detail');
+  showView('detail', { pop });
+  history.replaceState({ view: 'detail', id }, '');
   state.current = data;
   renderDetail();
   loadComments();
@@ -1621,7 +1644,7 @@ function renderStandings(){
 }
 
 // ===== 시작 =====
-Promise.all([initAuth(), loadSettings()]).then(() => showView(localStorage.getItem('startView') || 'home'));
+Promise.all([initAuth(), loadSettings()]).then(() => { const v = localStorage.getItem('startView') || 'home'; history.replaceState({ view: v }, ''); showView(v, { pop: true }); });
 </script>
 </body>
 </html>
