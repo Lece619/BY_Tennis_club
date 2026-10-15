@@ -2,25 +2,35 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#b3141c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BY 테니스">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
 <title>BY 테니스 클럽</title>
 <style>
   :root{
-    --bg:#f4f6f3; --card:#ffffff; --text:#1d2a1f; --muted:#6b7a6e; --line:#dfe6e0;
-    --accent:#2e8b57; --accent-soft:#e3f3ea; --danger:#c0392b; --regular:#3b6fd8; --flash:#e08a1e;
+    --bg:#f6f4f4; --card:#ffffff; --text:#2a1d1e; --muted:#7a6b6c; --line:#e6dddd;
+    --accent:#b3141c; --accent-soft:#fbe9ea; --danger:#7a7a7a; --regular:#3b6fd8; --flash:#e08a1e;
   }
   *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;background:var(--bg);color:var(--text);line-height:1.45}
-  header{background:var(--accent);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;z-index:5}
-  header h1{margin:0;font-size:18px;cursor:pointer}
+  header{background:linear-gradient(135deg,#c8161f,#8e0f16);box-shadow:0 2px 10px rgba(120,0,10,.25);color:#fff;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;z-index:5}
+  header h1{margin:0;font-size:18px;cursor:pointer;display:flex;align-items:center;gap:10px}
+  header h1 img{width:40px;height:40px;border-radius:50%;background:#fff;object-fit:cover}
   .chip{background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
   main{max-width:720px;margin:0 auto;padding:16px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(42,29,30,.05)}
   .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
-  button.primary{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:15px;cursor:pointer}
+  button.primary{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(179,20,28,.3)}
   button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:10px;padding:8px 14px;font-size:14px;cursor:pointer}
   button.danger{background:transparent;color:var(--danger);border:1px solid var(--danger);border-radius:10px;padding:8px 14px;font-size:14px;cursor:pointer}
   button.icon{background:transparent;border:none;font-size:20px;cursor:pointer;color:var(--text);padding:4px 10px}
+  button.primary,button.ghost,button.danger{min-height:40px;touch-action:manipulation}
   button:disabled{opacity:.5;cursor:default}
   .muted{color:var(--muted);font-size:13px}
   /* calendar */
@@ -30,9 +40,9 @@
   .cal .dow{text-align:center;font-size:12px;color:var(--muted);padding:4px 0}
   .cal .day{min-height:58px;border:1px solid var(--line);border-radius:8px;padding:4px;cursor:pointer;background:var(--card);display:flex;flex-direction:column;gap:2px;overflow:hidden}
   .cal .day.other{opacity:.35}
-  .cal .day.today{border-color:var(--accent)}
+  .cal .day.today .n{background:var(--accent);color:#fff;border-radius:50%;width:20px;height:20px;line-height:20px;text-align:center}
   .cal .day.selected{background:var(--accent-soft);border-color:var(--accent)}
-  .cal .day .n{font-size:12px}
+  .cal .day .n{font-size:12px;font-weight:600}
   .cal .day .n.sun{color:var(--danger)}
   .cal .day .n.sat{color:var(--regular)}
   .cal .tag{font-size:10px;border-radius:4px;padding:1px 4px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -41,19 +51,20 @@
   .badge.regular{background:var(--regular)} .badge.flash{background:var(--flash)}
   .item{padding:10px 0;border-top:1px solid var(--line);cursor:pointer}
   .item:first-of-type{border-top:none}
-  .item .title{font-weight:600}
+  .item .title{font-weight:600;font-size:15px}
+  .item:active{opacity:.7}
   /* participants */
   .people{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
-  .person{background:var(--accent-soft);border-radius:999px;padding:4px 10px;font-size:13px}
+  .person{background:var(--accent-soft);color:#8e0f16;border-radius:999px;padding:5px 11px;font-size:13px;font-weight:500}
   .person.me{background:var(--accent);color:#fff}
   /* bracket */
   .round{margin-top:10px}
-  .round h4{margin:6px 0}
+  .round h4{margin:8px 0 6px;font-size:14px;color:var(--muted);letter-spacing:.02em}
   .match{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:6px;font-size:14px}
   .match .team{text-align:center}
   .match .score{display:flex;align-items:center;gap:4px}
   .match input{width:40px;text-align:center;font-size:15px;padding:4px;border:1px solid var(--line);border-radius:6px}
-  .match.done{background:var(--accent-soft)}
+  .match.done{background:#fff8f0;border-color:#f3d9b1}
   .rest{font-size:13px;color:var(--muted)}
   /* form */
   label{display:block;font-size:13px;color:var(--muted);margin-top:10px}
@@ -74,11 +85,23 @@
   table.st th:first-child{text-align:left}
   table.st td{padding:4px 0;border-top:1px solid var(--line);text-align:center}
   table.st td:first-child{text-align:left}
+  /* 좁은 화면(폰) */
+  @media(max-width:480px){
+    main{padding:12px}
+    .card{padding:12px}
+    .cal{gap:3px}
+    .cal .day{min-height:52px;padding:3px;gap:3px}
+    .cal .tag{font-size:0;height:6px;padding:0;border-radius:3px}   /* 제목 대신 색 막대 */
+    .match{grid-template-columns:1fr;gap:4px;text-align:center}
+    .match .score{justify-content:center}
+    .match input{width:48px;font-size:16px}
+    input,select,textarea{font-size:16px}   /* iOS 자동 확대 방지 */
+  }
 </style>
 </head>
 <body>
 <header>
-  <h1 id="clubName" onclick="showCalendar()">BY 테니스 클럽</h1>
+  <h1 onclick="showCalendar()"><img src="icon-192.png" alt="" onerror="this.remove()"><span id="clubName">BY 테니스 클럽</span></h1>
   <div>
     <button class="chip" id="nameChip" onclick="askName(true)">이름 설정</button>
   </div>
@@ -166,6 +189,19 @@
   </div>
 </div>
 
+<!-- 이름 입력 -->
+<div class="modal" id="nameModal">
+  <div class="sheet">
+    <strong>이름을 알려 주세요</strong>
+    <p class="muted" style="margin:6px 0 0">참가 신청과 모임 만들기에 표시되는 이름입니다. 이 폰에 저장됩니다.</p>
+    <input id="fName" placeholder="예: 홍길동" maxlength="20" style="margin-top:12px" onkeydown="if(event.key==='Enter')saveName()">
+    <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="ghost" id="nameCancel" onclick="closeName()">취소</button>
+      <button class="primary" onclick="saveName()">저장</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -210,15 +246,25 @@ function fmtTime(t){ return t ? t.slice(0,5) : ''; }
 
 // ===== 이름 =====
 function renderName(){ $('nameChip').textContent = state.myName ? state.myName : '이름 설정'; }
-function askName(force){
+let afterName = null;   // 이름 저장 뒤 이어서 할 동작
+function askName(force, next){
   if (state.myName && !force) return true;
-  const n = prompt('본인 이름(닉네임)을 입력하세요', state.myName || '');
-  if (n && n.trim()) {
-    state.myName = n.trim(); localStorage.setItem('myName', state.myName); renderName();
-    if (state.current) renderDetail();
-    return true;
-  }
-  return !!state.myName;
+  afterName = next || null;
+  $('fName').value = state.myName || '';
+  $('nameCancel').classList.toggle('hidden', !state.myName);   // 처음엔 취소 불가
+  $('nameModal').classList.add('open');
+  setTimeout(()=>$('fName').focus(), 50);
+  return false;
+}
+function closeName(){ $('nameModal').classList.remove('open'); afterName=null; }
+function saveName(){
+  const n = $('fName').value.trim();
+  if (!n) return toast('이름을 입력하세요');
+  state.myName = n; localStorage.setItem('myName', n); renderName();
+  $('nameModal').classList.remove('open');
+  if (state.current) renderDetail();
+  const next = afterName; afterName = null;
+  if (next) next();
 }
 
 // ===== 달력 =====
@@ -277,7 +323,7 @@ function renderDayList(){
 }
 
 // ===== 모임 생성 =====
-function openCreate(){ if(!askName()) return; $('fDate').value = state.selected; $('createModal').classList.add('open'); $('fTitle').focus(); }
+function openCreate(){ if(!askName(false, openCreate)) return; $('fDate').value = state.selected; $('createModal').classList.add('open'); $('fTitle').focus(); }
 function closeCreate(){ $('createModal').classList.remove('open'); }
 async function submitCreate(){
   const row = {
@@ -334,7 +380,7 @@ function renderDetail(){
   renderBracket();
 }
 async function toggleJoin(){
-  if(!askName()) return;
+  if(!askName(false, toggleJoin)) return;
   const m = state.current;
   const mine = m.participants.find(p=>p.name===state.myName);
   const { error } = mine
