@@ -1197,32 +1197,35 @@ function renderBracket(){
   const edit = canManage(m);
   const dis = edit ? '' : 'disabled';
   const maxCourt = Math.max(m.courts || 0, 4, ...m.matches.map(x=>x.court||1));
-  const opts = sel => `<option value="">선수 선택</option>` + Object.values(byId).map(p=>`<option value="${p.user_id}" ${p.user_id===sel?'selected':''}>${esc(fmtName(p))}</option>`).join('');
-  const slot = (x, side, i) => {
+  const opts = (sel, used) => `<option value="">선수 선택</option>` + Object.values(byId).map(p=>{
+    const taken = used.has(p.user_id) && p.user_id !== sel;
+    return `<option value="${p.user_id}" ${p.user_id===sel?'selected':''} ${taken?'disabled':''}>${esc(fmtName(p))}${taken?' (배정됨)':''}</option>`;
+  }).join('');
+  const slot = (x, side, i, used) => {
     const id = (x['team_'+side]||[])[i];
     if (!edit) return `<div class="pl ${id?'':'empty'}">${id ? dn(id) : '미정'}</div>`;
-    return `<select onchange="setSlot('${x.id}','${side}',${i},this.value)">${opts(id)}</select>`;
+    return `<select onchange="setSlot('${x.id}','${side}',${i},this.value)">${opts(id, used)}</select>`;
   };
   const rounds = [...new Set(m.matches.map(x=>x.round))].sort((a,b)=>a-b);
   rounds.forEach(r=>{
     const ms = m.matches.filter(x=>x.round===r).sort((a,b)=>a.court-b.court);
-    const playing = new Set(ms.flatMap(x=>[...(x.team_a||[]),...(x.team_b||[])]));
+    const playing = new Set(ms.flatMap(x=>[...(x.team_a||[]),...(x.team_b||[])]).filter(Boolean));
     const rest = Object.keys(byId).filter(id=>!playing.has(id));
     const div = document.createElement('div'); div.className='round';
     div.innerHTML = `<h4>${r}라운드</h4>` + ms.map(x=>`
       <div class="match ${x.score_a!=null&&x.score_b!=null?'done':''}">
-        <div class="team">${slot(x,'a',0)}${slot(x,'a',1)}</div>
+        <div class="team">${slot(x,'a',0,playing)}${slot(x,'a',1,playing)}</div>
         <div class="score">
           <input class="sc" type="number" min="0" value="${x.score_a??''}" ${dis} onchange="saveScore('${x.id}','score_a',this.value)">
           <span>:</span>
           <input class="sc" type="number" min="0" value="${x.score_b??''}" ${dis} onchange="saveScore('${x.id}','score_b',this.value)">
         </div>
-        <div class="team">${slot(x,'b',0)}${slot(x,'b',1)}</div>
+        <div class="team">${slot(x,'b',0,playing)}${slot(x,'b',1,playing)}</div>
         <div class="foot">${edit
           ? `<select onchange="setCourt('${x.id}',this.value)">${Array.from({length:maxCourt+2},(_,i)=>i+1).map(c=>`<option value="${c}" ${c===x.court?'selected':''}>${c}번 코트</option>`).join('')}</select>` + `<button class="linkBtn" style="padding:2px 4px" onclick="deleteMatch('${x.id}')">경기 삭제</button>`
           : `${x.court}번 코트`}</div>
       </div>`).join('')
-      + (edit ? `<button class="addBtn" onclick="addMatch(${r})">+ ${r}라운드에 경기 추가</button>` : '')
+      + (edit ? `<button class="addBtn" onclick="addMatch(${r})">+ ${r}라운드에 코트 추가</button>` : '')
       + (rest.length?`<div class="rest">휴식: ${rest.map(dn).join(', ')}</div>`:'');
     box.appendChild(div);
   });
@@ -1233,6 +1236,8 @@ async function setSlot(matchId, side, idx, uid){
   const team = [...(x['team_'+side]||[])]; while (team.length < 2) team.push(null);
   const others = [...(x.team_a||[]), ...(x.team_b||[])].filter((v,i)=>!(side==='a' && i===idx) && !(side==='b' && i===idx+2));
   if (uid && others.includes(uid)){ toast('같은 선수가 한 경기에 두 번 들어갈 수 없어요'); return renderBracket(); }
+  const inRound = m.matches.filter(z=>z.round===x.round && z.id!==matchId).flatMap(z=>[...(z.team_a||[]),...(z.team_b||[])]);
+  if (uid && inRound.includes(uid)){ toast('이 라운드의 다른 코트에 이미 배정된 선수예요'); return renderBracket(); }
   team[idx] = uid || null;
   const clean = team.filter(Boolean);
   const { error } = await db.from('matches').update({ ['team_'+side]: clean }).eq('id', matchId);
