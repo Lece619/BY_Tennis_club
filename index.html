@@ -279,6 +279,7 @@
       <div id="standings"></div>
     </div>
     <div class="row" style="justify-content:flex-end;margin-bottom:30px">
+      <button class="ghost" id="editBtn" onclick="openEdit()">모임 수정</button>
       <button class="danger" id="deleteBtn" onclick="deleteMeetup()">모임 삭제</button>
     </div>
   </section>
@@ -330,7 +331,7 @@
 <!-- 모임 생성 -->
 <div class="modal" id="createModal" onclick="if(event.target===this)closeCreate()">
   <div class="sheet">
-    <div class="row"><strong>모임 만들기</strong><button class="icon" onclick="closeCreate()">&times;</button></div>
+    <div class="row"><strong id="createTitle">모임 만들기</strong><button class="icon" onclick="closeCreate()">&times;</button></div>
     <label>종류</label>
     <select id="fKind"></select>
     <div class="muted" id="kindHint"></div>
@@ -356,7 +357,7 @@
     <textarea id="fNote" placeholder="회비, 준비물 등"></textarea>
     <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
       <button class="ghost" onclick="closeCreate()">취소</button>
-      <button class="primary" onclick="submitCreate()">만들기</button>
+      <button class="primary" id="createSubmit" onclick="submitCreate()">만들기</button>
     </div>
   </div>
 </div>
@@ -483,7 +484,7 @@ const age  = y => y ? String(new Date().getFullYear() - y) : '';
 // 참가자(p.profiles) 또는 프로필 객체를 표시 방식에 맞게 문자열로
 function fmtName(p){
   const pr = p.profiles || p;
-  const parts = [p.name || pr.name];
+  const parts = [pr.name || p.name];
   if (state.displayFormat !== 'name' && pr.birth_year) parts.push(age(pr.birth_year));
   if (state.displayFormat === 'name_age_exp' && pr.experience) parts.push(EXP[pr.experience]);
   return parts.join(' / ') + crown(pr);
@@ -510,6 +511,7 @@ const state = {
   meetups: [],                    // 이번 달 모임
   current: null,                  // 상세 보고 있는 모임
   view: 'home', prevView: 'home',  // 현재 화면, 상세에서 돌아갈 화면
+  editId: null,                   // 수정 중인 모임 id
   user: null,                     // 로그인한 회원 프로필 {id, name, avatar_url, role}
   displayFormat: 'name'           // 관리자이 정한 이름 표시 방식
 };
@@ -864,7 +866,19 @@ function setCap(v){
 }
 const capText = c => c ? `${c}명` : '제한 없음';
 const cnt = (n, c) => c ? `${n}/${c}명` : `${n}명`;
-function closeCreate(){ $('createModal').classList.remove('open'); }
+function closeCreate(){ $('createModal').classList.remove('open'); state.editId = null; $('createTitle').textContent = '모임 만들기'; $('createSubmit').textContent = '만들기'; }
+function openEdit(){
+  const m = state.current; if (!m || !canManage(m)) return;
+  if (m.kind === 'regular' && !isAdmin()) return toast(`${KIND.regular}은 관리자만 수정할 수 있어요`);
+  const kinds = isAdmin() ? ['flash','regular'] : ['flash'];
+  $('fKind').innerHTML = kinds.map(k => `<option value="${k}" ${k===m.kind?'selected':''}>${KIND[k]}</option>`).join('');
+  $('kindHint').textContent = '';
+  $('fTitle').value = m.title; $('fDate').value = m.date; $('fTime').value = m.start_time ? m.start_time.slice(0,5) : '';
+  $('fLocation').value = m.location || ''; $('fCourts').value = m.courts || ''; $('fNote').value = m.note || '';
+  $('fCapacity').value = m.capacity || ''; setCap(m.capacity ? 'limit' : 'none');
+  state.editId = m.id; $('createTitle').textContent = '모임 수정'; $('createSubmit').textContent = '저장';
+  $('createModal').classList.add('open');
+}
 async function submitCreate(){
   const row = {
     kind: $('fKind').value, title: $('fTitle').value.trim(), date: $('fDate').value,
@@ -877,6 +891,13 @@ async function submitCreate(){
   if (!row.location) return toast('장소를 입력하세요');
   if (document.querySelector('#capSeg button.active')?.dataset.v === 'limit' && !(row.capacity >= 2)) return toast('모집 인원을 2명 이상으로 입력하세요');
   if (row.kind === 'regular' && !isAdmin()) return toast(`${KIND.regular}은 관리자만 만들 수 있어요`);
+  if (state.editId){
+    const id = state.editId;
+    delete row.created_by; delete row.created_by_id;
+    const { error } = await db.from('meetups').update(row).eq('id', id);
+    if (error) return showError(error);
+    closeCreate(); toast('수정했습니다'); openDetail(id); return;
+  }
   const { data, error } = await db.from('meetups').insert(row).select().single();
   if (error) return showError(error);
   await db.from('participants').insert({ meetup_id: data.id, user_id: myId(), name: state.user.name }); // 만든 사람 자동 참가
@@ -973,7 +994,7 @@ async function loadHome(){
 // ===== 상세 =====
 async function openDetail(id){
   await loadSettings();   // 다른 기기에서 바꾼 이름 표시 방식 반영
-  const { data, error } = await db.from('meetups').select('*, participants(*, profiles(experience,gender,birth_year,role,show_crown)), matches(*)').eq('id', id).single();
+  const { data, error } = await db.from('meetups').select('*, host:profiles!meetups_created_by_profile_fk(name,experience,gender,birth_year,role,show_crown), participants(*, profiles(name,experience,gender,birth_year,role,show_crown)), matches(*)').eq('id', id).single();
   if (error) return showError(error);
   data.participants.sort((a,b)=>a.created_at.localeCompare(b.created_at));
   data.matches.sort((a,b)=>a.round-b.round || a.court-b.court);
@@ -990,14 +1011,14 @@ function renderDetail(){
       <div><span>장소</span><b>${esc(m.location||'미정')}</b></div>
       <div><span>코트</span><b>${m.courts ? m.courts+'면' : '미정'}</b></div>
       <div><span>인원</span><b>${capText(m.capacity)}</b></div>
-      <div><span>주최</span><b>${esc(m.created_by||'-')}</b></div>
+      <div><span>주최</span><b>${esc(m.host ? fmtName(m.host) : (m.created_by||'-'))}</b></div>
       ${m.note?`<div><span>메모</span><b style="white-space:pre-wrap;font-weight:400">${esc(m.note)}</b></div>`:''}
     </div>`;
   const names = m.participants.map(p=>p.name);
   const manage = canManage(m);
   $('pCount').textContent = m.capacity ? `${names.length}/${m.capacity}` : `${names.length}`;
   $('people').innerHTML = m.participants.length
-    ? m.participants.map(p=>`<span class="person ${p.user_id===myId()?'me':''}">${esc(fmtName(p))}${manage && p.user_id!==myId() ? `<span class="x" title="참가 취소시키기" onclick="removeParticipant('${p.id}','${esc(p.name)}')">&times;</span>` : ''}</span>`).join('')
+    ? m.participants.map(p=>`<span class="person ${p.user_id===myId()?'me':''}">${esc(fmtName(p))}${manage && p.user_id!==myId() ? `<span class="x" title="참가 취소시키기" onclick="removeParticipant('${p.id}','${esc(p.profiles?.name || p.name)}')">&times;</span>` : ''}</span>`).join('')
     : '<span class="muted">아직 없음</span>';
   const joined = m.participants.some(p=>p.user_id===myId());
   $('joinBtn').textContent = joined ? '참가 취소' : '참가';
@@ -1005,11 +1026,12 @@ function renderDetail(){
   $('joinBtn').disabled = !joined && !!m.capacity && names.length >= m.capacity;
   $('joinBtn').textContent = (!joined && m.capacity && names.length >= m.capacity) ? '정원 마감' : $('joinBtn').textContent;
   $('deleteBtn').classList.toggle('hidden', !manage);
+  $('editBtn').classList.toggle('hidden', !manage);
   $('genBtn').classList.toggle('hidden', !manage);
   $('rounds').classList.toggle('hidden', !manage);
   $('genBtn').disabled = names.length < 4;
   $('bracketHint').textContent = !manage
-    ? (m.matches.length ? '점수는 주최자와 관리자이 입력합니다.' : '대진표는 주최자나 관리자이 만들면 여기에 표시됩니다.')
+    ? (m.matches.length ? '점수는 주최자와 관리자가 입력합니다.' : '대진표는 주최자나 관리자가 만들면 여기에 표시됩니다.')
     : names.length < 4
       ? '참가자가 4명 이상이면 복식 대진을 만들 수 있습니다.'
       : (m.matches.length ? '점수를 입력하면 자동 저장됩니다. 다시 생성하면 기존 대진은 지워집니다.' : '라운드 수를 고르고 대진 생성을 누르세요.');
@@ -1046,17 +1068,18 @@ const pairKey = (a,b) => [a,b].sort().join('|');
 
 async function generateBracket(){
   const m = state.current;
-  const players = m.participants.map(p=>p.name);
-  if (players.length < 4) return;
+  const ps = m.participants.filter(p => p.user_id);
+  if (ps.length < 4) return;
   if (m.matches.length && !confirm('기존 대진표를 지우고 새로 만들까요?')) return;
   const rounds = +$('rounds').value;
-  const courts = Math.max(1, Math.min(m.courts || 99, Math.floor(players.length/4)));
-  const played = Object.fromEntries(players.map(p=>[p,0]));
+  const ids = ps.map(p => p.user_id);
+  const courts = Math.max(1, Math.min(m.courts || 99, Math.floor(ids.length/4)));
+  const played = Object.fromEntries(ids.map(i=>[i,0]));
   const partnered = {};   // 같은 파트너 반복 줄이기용 카운트
   const rows = [];
   for (let r=1; r<=rounds; r++){
     // 적게 뛴 사람 우선, 동률은 랜덤
-    const order = shuffle(players.slice()).sort((a,b)=>played[a]-played[b]);
+    const order = shuffle(ids.slice()).sort((a,b)=>played[a]-played[b]);
     const playing = order.slice(0, courts*4);
     for (let c=0; c<courts; c++){
       const four = playing.slice(c*4, c*4+4);
@@ -1085,15 +1108,14 @@ function renderBracket(){
   const m = state.current;
   const box = $('bracket'); box.innerHTML = '';
   if (!m.matches.length){ $('standings').innerHTML=''; return; }
-  const players = m.participants.map(p=>p.name);
-  const byName = Object.fromEntries(m.participants.map(p=>[p.name, p]));
-  const dn = n => esc(byName[n] ? fmtName(byName[n]) : n);
+  const byId = Object.fromEntries(m.participants.filter(p=>p.user_id).map(p=>[p.user_id, p]));
+  const dn = id => esc(byId[id] ? fmtName(byId[id]) : '(나간 회원)');
   const dis = canManage(m) ? '' : 'disabled';
   const rounds = [...new Set(m.matches.map(x=>x.round))];
   rounds.forEach(r=>{
     const ms = m.matches.filter(x=>x.round===r);
     const playing = new Set(ms.flatMap(x=>[...x.team_a,...x.team_b]));
-    const rest = players.filter(p=>!playing.has(p));
+    const rest = Object.keys(byId).filter(id=>!playing.has(id));
     const div = document.createElement('div'); div.className='round';
     div.innerHTML = `<h4>${r}라운드</h4>` + ms.map(x=>`
       <div class="match ${x.score_a!=null&&x.score_b!=null?'done':''}">
@@ -1126,12 +1148,12 @@ function renderStandings(){
     x.team_a.forEach(p=>{ const s=get(p); s.gf+=x.score_a; s.ga+=x.score_b; if(aw)s.w++; if(bw)s.l++; });
     x.team_b.forEach(p=>{ const s=get(p); s.gf+=x.score_b; s.ga+=x.score_a; if(bw)s.w++; if(aw)s.l++; });
   });
-  const byName = Object.fromEntries(m.participants.map(p=>[p.name, p]));
+  const byId = Object.fromEntries(m.participants.filter(p=>p.user_id).map(p=>[p.user_id, p]));
   const rows = Object.entries(st).sort((a,b)=>b[1].w-a[1].w || (b[1].gf-b[1].ga)-(a[1].gf-a[1].ga));
   $('standings').innerHTML = rows.length ? `<h4 style="margin:14px 0 6px">결과</h4>
     <table class="st">
       <tr class="muted"><th>이름</th><th>승</th><th>패</th><th>득실</th></tr>
-      ${rows.map(([n,s])=>{ const d=s.gf-s.ga; return `<tr><td>${esc(byName[n] ? fmtName(byName[n]) : n)}</td><td>${s.w}</td><td>${s.l}</td><td>${d>0?'+':''}${d}</td></tr>`; }).join('')}
+      ${rows.map(([id,s])=>{ const d=s.gf-s.ga; return `<tr><td>${esc(byId[id] ? fmtName(byId[id]) : '(나간 회원)')}</td><td>${s.w}</td><td>${s.l}</td><td>${d>0?'+':''}${d}</td></tr>`; }).join('')}
     </table>` : '';
 }
 
