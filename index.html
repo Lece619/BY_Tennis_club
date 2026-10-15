@@ -66,6 +66,7 @@
   .opts button{flex:1;min-width:64px;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:9px 6px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;min-height:40px}
   .opts button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
   .notice{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:14px;padding:12px 14px;margin-bottom:12px;cursor:pointer;font-size:14px;font-weight:600}
+  .linkBtn{background:none;border:none;color:#9ca3af;font-size:12px;font-weight:500;cursor:pointer;padding:4px 6px;text-decoration:underline;text-underline-offset:2px}
   .adminBadge{font-size:11px;background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 7px;margin-left:4px;vertical-align:middle;font-weight:700}
   /* home */
   .hero{background:linear-gradient(135deg,#c8161f 0%,#8e0f16 100%);color:#fff;border-radius:20px;padding:18px 18px 16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(142,15,22,.25);position:relative;overflow:hidden}
@@ -207,14 +208,23 @@
       <div id="recent" style="margin-top:6px"></div>
     </div>
     <div class="card hidden" id="adminCard">
-      <strong>회원 관리 <span class="adminBadge">운영진</span></strong>
-      <div class="muted">운영진 지정과 해제를 할 수 있습니다.</div>
+      <strong>회원 관리 <span class="adminBadge">관리자</span></strong>
+      <div class="muted">관리자 지정과 해제를 할 수 있습니다.</div>
+      <div style="margin-top:10px;padding:12px;background:var(--soft);border-radius:12px">
+        <div style="font-size:14px;font-weight:600">이름 표시 방식 <span class="muted" style="font-weight:400">(모든 회원 화면에 적용)</span></div>
+        <div class="seg" id="fmtSeg" style="margin-top:8px;display:flex">
+          <button data-v="name" onclick="setDisplayFormat('name')">닉네임</button>
+          <button data-v="name_age" onclick="setDisplayFormat('name_age')">닉네임 / 나이</button>
+          <button data-v="name_age_exp" onclick="setDisplayFormat('name_age_exp')">닉네임 / 나이 / 구력</button>
+        </div>
+        <div class="muted" style="margin-top:6px">예: <span id="fmtExample"></span></div>
+      </div>
       <div id="members" style="margin-top:6px"></div>
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
-        <div style="font-size:14px;font-weight:600">운영진 코드 변경</div>
-        <div class="muted">새 운영진은 내 정보에서 이 코드를 입력해 인증합니다. 6자 이상.</div>
+        <div style="font-size:14px;font-weight:600">관리자 코드 변경</div>
+        <div class="muted">새 관리자은 내 정보에서 이 코드를 입력해 인증합니다. 6자 이상.</div>
         <div style="display:flex;gap:8px;margin-top:8px">
-          <input id="fNewCode" placeholder="새 운영진 코드" autocomplete="off">
+          <input id="fNewCode" placeholder="새 관리자 코드" autocomplete="off">
           <button class="ghost" style="white-space:nowrap" onclick="changeAdminCode()">변경</button>
         </div>
       </div>
@@ -329,7 +339,7 @@
 <div class="modal" id="guestModal" onclick="if(event.target===this)closeGuest()">
   <div class="sheet">
     <div class="row"><strong>게스트로 참여</strong><button class="icon" onclick="closeGuest()">&times;</button></div>
-    <p class="muted" style="margin:4px 0 0">카카오 계정 없이 임시로 참여할 때 씁니다. 같은 이름과 전화번호로 다른 폰에서도 다시 로그인할 수 있어요. 전화번호는 운영진에게만 보입니다.</p>
+    <p class="muted" style="margin:4px 0 0">카카오 계정 없이 임시로 참여할 때 씁니다. 같은 이름과 전화번호로 다른 폰에서도 다시 로그인할 수 있어요. 전화번호는 관리자에게만 보입니다.</p>
     <label>이름</label>
     <input id="gName" maxlength="20" placeholder="예: 홍길동" autocomplete="name">
     <label>전화번호</label>
@@ -341,7 +351,12 @@
 <!-- 내 정보 -->
 <div class="modal" id="profileModal" onclick="if(event.target===this)closeProfile()">
   <div class="sheet">
-    <div class="row"><strong id="profileTitle">내 정보</strong><button class="icon" onclick="closeProfile()">&times;</button></div>
+    <div class="row"><strong id="profileTitle">내 정보</strong>
+      <div style="display:flex;align-items:center;gap:4px">
+        <button class="linkBtn" id="claimLink" onclick="showClaim()">관리자 인증</button>
+        <button class="icon" onclick="closeProfile()">&times;</button>
+      </div>
+    </div>
     <p class="muted hidden" id="profileIntro" style="margin:4px 0 0">대진을 짤 때 참고합니다. 나중에 내 정보에서 바꿀 수 있어요.</p>
     <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
       <img id="pAvatar" class="avatar-lg" src="" alt="" onerror="this.style.visibility='hidden'">
@@ -353,17 +368,16 @@
     <div class="opts" id="optExp"></div>
     <label>성별</label>
     <div class="opts" id="optGender"></div>
-    <label>생년 <span class="muted" style="font-weight:400">(뒤 두 자리, 운영진에게만 보입니다)</span></label>
+    <label>생년 <span class="muted" style="font-weight:400">(뒤 두 자리)</span></label>
     <input id="fBirth" inputmode="numeric" maxlength="2" placeholder="예: 88" style="width:120px">
     <div style="margin-top:16px;display:flex;gap:8px;justify-content:space-between">
       <button class="danger" id="profileLeft" onclick="logout()">로그아웃</button>
       <button class="primary" onclick="saveProfile()">저장</button>
     </div>
-    <div id="claimBox" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
-      <strong style="font-size:14px">운영진 인증</strong>
-      <div class="muted">운영진에게 받은 코드를 입력하면 운영진 권한이 생깁니다.</div>
+    <div id="claimBox" class="hidden" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
+      <div class="muted">관리자에게 받은 코드를 입력하면 관리자 권한이 생깁니다.</div>
       <div style="display:flex;gap:8px;margin-top:8px">
-        <input id="fAdminCode" placeholder="운영진 코드" autocomplete="off" onkeydown="if(event.key==='Enter')claimAdmin()">
+        <input id="fAdminCode" placeholder="관리자 코드" autocomplete="off" onkeydown="if(event.key==='Enter')claimAdmin()">
         <button class="ghost" style="white-space:nowrap" onclick="claimAdmin()">인증</button>
       </div>
     </div>
@@ -403,6 +417,28 @@ const https  = u => u ? String(u).replace(/^http:\/\//, 'https://') : '';
 const complete = u => !!(u && u.experience && u.gender && u.birth_year);
 const yy2year = yy => { const n = +yy; return n <= (new Date().getFullYear() % 100) ? 2000 + n : 1900 + n; };
 const born = y => y ? `${String(y).slice(2)}년생` : '';
+const age  = y => y ? String(new Date().getFullYear() - y) : '';
+// 참가자(p.profiles) 또는 프로필 객체를 표시 방식에 맞게 문자열로
+function fmtName(p){
+  const pr = p.profiles || p;
+  const parts = [p.name || pr.name];
+  if (state.displayFormat !== 'name' && pr.birth_year) parts.push(age(pr.birth_year));
+  if (state.displayFormat === 'name_age_exp' && pr.experience) parts.push(EXP[pr.experience]);
+  return parts.join(' / ');
+}
+async function loadSettings(){
+  const { data } = await db.from('club_settings').select('key,value');
+  (data || []).forEach(r => { if (r.key === 'display_format') state.displayFormat = r.value; });
+}
+async function setDisplayFormat(v){
+  const { error } = await db.from('club_settings').upsert({ key: 'display_format', value: v });
+  if (error) return showError(error);
+  state.displayFormat = v; renderFmtSeg(); toast('이름 표시 방식을 바꿨습니다');
+}
+function renderFmtSeg(){
+  document.querySelectorAll('#fmtSeg button').forEach(b => b.classList.toggle('active', b.dataset.v === state.displayFormat));
+  $('fmtExample').textContent = fmtName({ name: '홍길동', birth_year: 1988, experience: '3-5' });
+}
 async function sha256(t){ const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
 
 const state = {
@@ -412,7 +448,8 @@ const state = {
   meetups: [],                    // 이번 달 모임
   current: null,                  // 상세 보고 있는 모임
   view: 'home', prevView: 'home',  // 현재 화면, 상세에서 돌아갈 화면
-  user: null                      // 로그인한 회원 프로필 {id, name, avatar_url, role}
+  user: null,                     // 로그인한 회원 프로필 {id, name, avatar_url, role}
+  displayFormat: 'name'           // 관리자이 정한 이름 표시 방식
 };
 
 function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
@@ -433,7 +470,7 @@ function dday(s){ const d = Math.round((new Date(s+'T00:00') - new Date(todayStr
 
 // ===== 로그인 / 회원 =====
 const isAdmin   = () => !!state.user && state.user.role === 'admin';
-const canManage = m  => !!state.user && (isAdmin() || m.created_by_id === state.user.id);   // 운영진 또는 모임 주최자
+const canManage = m  => !!state.user && (isAdmin() || m.created_by_id === state.user.id);   // 관리자 또는 모임 주최자
 const myId      = () => state.user ? state.user.id : null;
 
 async function initAuth(){
@@ -507,7 +544,7 @@ async function guestAuth(){
   if (!/invalid login credentials/i.test(r.error.message)) return showError(r.error);
   const su = await db.auth.signUp({ email, password, options: { data: { name, phone, guest: true } } });
   if (su.error){
-    if (/already registered|already exists/i.test(su.error.message)) return toast('이미 등록된 번호입니다. 등록할 때 쓴 이름을 입력하세요');
+    if (/already registered|already exists/i.test(su.error.message)) return toast('이 번호는 다른 이름으로 등록돼 있어요. 등록할 때 쓴 이름을 입력하세요');
     return showError(su.error);
   }
   if (!su.data.session) return toast('Supabase에서 Confirm email 설정을 꺼야 합니다');
@@ -518,7 +555,7 @@ function openProfile(onboard){
   const u = state.user;
   $('pAvatar').src = https(u.avatar_url); $('pAvatar').style.visibility = u.avatar_url ? 'visible' : 'hidden';
   $('pName').textContent = u.name;
-  $('pRole').textContent = isAdmin() ? '운영진' : (u.is_guest ? '게스트' : '회원');
+  $('pRole').textContent = isAdmin() ? '관리자' : (u.is_guest ? '게스트' : '회원');
   $('fName').value = u.name; $('fAdminCode').value = '';
   pick.experience = u.experience || null; pick.gender = u.gender || null;
   renderOpts('optExp', EXP, 'experience'); renderOpts('optGender', GENDER, 'gender');
@@ -528,23 +565,25 @@ function openProfile(onboard){
   const left = $('profileLeft');
   if (onboard){ left.textContent = '나중에'; left.onclick = () => { sessionStorage.setItem('onboardSkipped','1'); closeProfile(); }; }
   else { left.textContent = '로그아웃'; left.onclick = logout; }
-  $('claimBox').classList.toggle('hidden', isAdmin() || !!onboard);
+  $('claimLink').classList.toggle('hidden', isAdmin() || !!onboard);
+  $('claimBox').classList.add('hidden');
   $('profileModal').classList.add('open');
 }
+function showClaim(){ $('claimBox').classList.remove('hidden'); $('claimLink').classList.add('hidden'); setTimeout(()=>$('fAdminCode').focus(), 50); }
 async function claimAdmin(){
   const code = $('fAdminCode').value.trim();
   if (!code) return toast('코드를 입력하세요');
   const { data, error } = await db.rpc('claim_admin', { code });
   if (error) return showError(error);
   if (!data) return toast('코드가 맞지 않습니다');
-  state.user.role = 'admin'; closeProfile(); toast('운영진이 되었습니다'); refreshView();
+  state.user.role = 'admin'; closeProfile(); toast('관리자이 되었습니다'); refreshView();
 }
 async function changeAdminCode(){
   const c = $('fNewCode').value.trim();
   if (c.length < 6) return toast('6자 이상 입력하세요');
   const { error } = await db.rpc('set_admin_code', { new_code: c });
   if (error) return showError(error);
-  $('fNewCode').value = ''; toast('운영진 코드를 바꿨습니다');
+  $('fNewCode').value = ''; toast('관리자 코드를 바꿨습니다');
 }
 function closeProfile(){ $('profileModal').classList.remove('open'); }
 async function saveProfile(){
@@ -568,15 +607,15 @@ async function loadMembers(){
   $('members').innerHTML = data.map(p => `
     <div class="member">
       ${p.avatar_url ? `<img src="${esc(https(p.avatar_url))}" alt="">` : '<img alt="">'}
-      <div class="nm">${esc(p.name)}${p.role==='admin' ? '<span class="adminBadge">운영진</span>' : ''}${p.is_guest ? '<span class="adminBadge" style="background:#e0f2fe;color:#075985">게스트</span>' : ''}<div class="muted" style="font-size:12px">${[EXP[p.experience], GENDER[p.gender], born(p.birth_year), phones[p.id]].filter(Boolean).join(' · ') || '프로필 미입력'}</div></div>
+      <div class="nm">${esc(p.name)}${p.role==='admin' ? '<span class="adminBadge">관리자</span>' : ''}${p.is_guest ? '<span class="adminBadge" style="background:#e0f2fe;color:#075985">게스트</span>' : ''}<div class="muted" style="font-size:12px">${[EXP[p.experience], GENDER[p.gender], born(p.birth_year), phones[p.id]].filter(Boolean).join(' · ') || '프로필 미입력'}</div></div>
       ${p.id === myId() ? '<span class="muted">나</span>' :
-        `<button class="ghost" style="min-height:32px;padding:4px 10px" onclick="setRole('${p.id}','${p.role==='admin'?'member':'admin'}')">${p.role==='admin'?'운영진 해제':'운영진 지정'}</button>`}
+        `<button class="ghost" style="min-height:32px;padding:4px 10px" onclick="setRole('${p.id}','${p.role==='admin'?'member':'admin'}')">${p.role==='admin'?'관리자 해제':'관리자 지정'}</button>`}
     </div>`).join('') || '<p class="muted">회원이 없습니다.</p>';
 }
 async function setRole(id, role){
   const { error } = await db.from('profiles').update({ role }).eq('id', id);
   if (error) return showError(error);
-  toast(role==='admin' ? '운영진으로 지정했습니다' : '운영진을 해제했습니다'); loadMembers();
+  toast(role==='admin' ? '관리자으로 지정했습니다' : '관리자을 해제했습니다'); loadMembers();
 }
 
 // ===== 달력 =====
@@ -721,12 +760,12 @@ async function loadHome(){
   $('logoutRow').classList.toggle('hidden', !state.user);
   if (state.user) $('logoutWho').textContent = `${state.user.name} (${state.user.is_guest ? '게스트' : '카카오'})`;
   $('adminCard').classList.toggle('hidden', !isAdmin());
-  if (isAdmin()) loadMembers();
+  if (isAdmin()) { renderFmtSeg(); loadMembers(); }
 }
 
 // ===== 상세 =====
 async function openDetail(id){
-  const { data, error } = await db.from('meetups').select('*, participants(*, profiles(experience,gender)), matches(*)').eq('id', id).single();
+  const { data, error } = await db.from('meetups').select('*, participants(*, profiles(experience,gender,birth_year)), matches(*)').eq('id', id).single();
   if (error) return showError(error);
   data.participants.sort((a,b)=>a.created_at.localeCompare(b.created_at));
   data.matches.sort((a,b)=>a.round-b.round || a.court-b.court);
@@ -749,7 +788,7 @@ function renderDetail(){
   const manage = canManage(m);
   $('pCount').textContent = `${names.length}/${m.capacity}`;
   $('people').innerHTML = m.participants.length
-    ? m.participants.map(p=>`<span class="person ${p.user_id===myId()?'me':''}">${esc(p.name)}${p.profiles?.experience ? `<span class="lv">${EXP[p.profiles.experience]||''}</span>` : ''}${manage && p.user_id!==myId() ? `<span class="x" title="참가 취소시키기" onclick="removeParticipant('${p.id}','${esc(p.name)}')">&times;</span>` : ''}</span>`).join('')
+    ? m.participants.map(p=>`<span class="person ${p.user_id===myId()?'me':''}">${esc(fmtName(p))}${manage && p.user_id!==myId() ? `<span class="x" title="참가 취소시키기" onclick="removeParticipant('${p.id}','${esc(p.name)}')">&times;</span>` : ''}</span>`).join('')
     : '<span class="muted">아직 없음</span>';
   const joined = m.participants.some(p=>p.user_id===myId());
   $('joinBtn').textContent = joined ? '참가 취소' : '참가';
@@ -760,7 +799,7 @@ function renderDetail(){
   $('rounds').classList.toggle('hidden', !manage);
   $('genBtn').disabled = names.length < 4;
   $('bracketHint').textContent = !manage
-    ? (m.matches.length ? '점수는 주최자와 운영진이 입력합니다.' : '대진표는 주최자나 운영진이 만들면 여기에 표시됩니다.')
+    ? (m.matches.length ? '점수는 주최자와 관리자이 입력합니다.' : '대진표는 주최자나 관리자이 만들면 여기에 표시됩니다.')
     : names.length < 4
       ? '참가자가 4명 이상이면 복식 대진을 만들 수 있습니다.'
       : (m.matches.length ? '점수를 입력하면 자동 저장됩니다. 다시 생성하면 기존 대진은 지워집니다.' : '라운드 수를 고르고 대진 생성을 누르세요.');
@@ -836,6 +875,8 @@ function renderBracket(){
   const box = $('bracket'); box.innerHTML = '';
   if (!m.matches.length){ $('standings').innerHTML=''; return; }
   const players = m.participants.map(p=>p.name);
+  const byName = Object.fromEntries(m.participants.map(p=>[p.name, p]));
+  const dn = n => esc(byName[n] ? fmtName(byName[n]) : n);
   const dis = canManage(m) ? '' : 'disabled';
   const rounds = [...new Set(m.matches.map(x=>x.round))];
   rounds.forEach(r=>{
@@ -845,15 +886,15 @@ function renderBracket(){
     const div = document.createElement('div'); div.className='round';
     div.innerHTML = `<h4>${r}라운드</h4>` + ms.map(x=>`
       <div class="match ${x.score_a!=null&&x.score_b!=null?'done':''}">
-        <div class="team">${x.team_a.map(esc).join(' · ')}</div>
+        <div class="team">${x.team_a.map(dn).join(' · ')}</div>
         <div class="score">
           <input type="number" min="0" value="${x.score_a??''}" ${dis} onchange="saveScore('${x.id}','score_a',this.value)">
           <span>:</span>
           <input type="number" min="0" value="${x.score_b??''}" ${dis} onchange="saveScore('${x.id}','score_b',this.value)">
         </div>
-        <div class="team">${x.team_b.map(esc).join(' · ')}</div>
+        <div class="team">${x.team_b.map(dn).join(' · ')}</div>
         <div class="muted" style="grid-column:1/-1;text-align:center;font-size:11px">${x.court}번 코트</div>
-      </div>`).join('') + (rest.length?`<div class="rest">휴식: ${rest.map(esc).join(', ')}</div>`:'');
+      </div>`).join('') + (rest.length?`<div class="rest">휴식: ${rest.map(dn).join(', ')}</div>`:'');
     box.appendChild(div);
   });
   renderStandings();
@@ -874,16 +915,17 @@ function renderStandings(){
     x.team_a.forEach(p=>{ const s=get(p); s.gf+=x.score_a; s.ga+=x.score_b; if(aw)s.w++; if(bw)s.l++; });
     x.team_b.forEach(p=>{ const s=get(p); s.gf+=x.score_b; s.ga+=x.score_a; if(bw)s.w++; if(aw)s.l++; });
   });
+  const byName = Object.fromEntries(m.participants.map(p=>[p.name, p]));
   const rows = Object.entries(st).sort((a,b)=>b[1].w-a[1].w || (b[1].gf-b[1].ga)-(a[1].gf-a[1].ga));
   $('standings').innerHTML = rows.length ? `<h4 style="margin:14px 0 6px">결과</h4>
     <table class="st">
       <tr class="muted"><th>이름</th><th>승</th><th>패</th><th>득실</th></tr>
-      ${rows.map(([n,s])=>{ const d=s.gf-s.ga; return `<tr><td>${esc(n)}</td><td>${s.w}</td><td>${s.l}</td><td>${d>0?'+':''}${d}</td></tr>`; }).join('')}
+      ${rows.map(([n,s])=>{ const d=s.gf-s.ga; return `<tr><td>${esc(byName[n] ? fmtName(byName[n]) : n)}</td><td>${s.w}</td><td>${s.l}</td><td>${d>0?'+':''}${d}</td></tr>`; }).join('')}
     </table>` : '';
 }
 
 // ===== 시작 =====
-initAuth().then(() => showView(localStorage.getItem('startView') || 'home'));
+Promise.all([initAuth(), loadSettings()]).then(() => showView(localStorage.getItem('startView') || 'home'));
 </script>
 </body>
 </html>
