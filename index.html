@@ -68,6 +68,9 @@
   .notice{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:14px;padding:12px 14px;margin-bottom:12px;cursor:pointer;font-size:14px;font-weight:600}
   .linkBtn{background:none;border:none;color:#9ca3af;font-size:12px;font-weight:500;cursor:pointer;padding:4px 6px;text-decoration:underline;text-underline-offset:2px}
   .star{color:#f59e0b;font-size:.85em}
+  .link{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;margin-top:6px;background:var(--soft);border:1px solid var(--line);border-radius:12px;cursor:pointer;font-weight:600;font-size:14px}
+  .link:active{background:var(--line)}
+  .link svg{width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
   .adminBadge{font-size:11px;background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 7px;margin-left:4px;vertical-align:middle;font-weight:700}
   /* home */
   .hero{background:linear-gradient(135deg,#c8161f 0%,#8e0f16 100%);color:#fff;border-radius:20px;padding:18px 18px 16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(142,15,22,.25);position:relative;overflow:hidden}
@@ -210,6 +213,11 @@
       <div id="recent" style="margin-top:6px"></div>
     </div>
     <div class="card">
+      <strong>코트 예약</strong>
+      <div class="muted">누르면 새 탭에서 예약 사이트가 열립니다.</div>
+      <div id="links" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
       <div class="row">
         <div><strong style="font-size:14px">앱을 열 때 첫 화면</strong></div>
         <div class="seg" id="startSeg">
@@ -278,7 +286,7 @@
   <section id="viewAdmin" class="hidden">
     <div class="card">
       <div class="row"><strong>승인 대기</strong><span class="muted" id="pendingCount"></span></div>
-      <div class="muted">카카오나 게스트로 새로 가입한 계정입니다. 모임 회원이 맞으면 승인하세요.</div>
+      <div class="muted">새로 가입한 계정입니다. 승인하면 게스트로 모임에 참가할 수 있고, 회원 목록에서 "회원으로" 올리면 자유 모임도 만들 수 있습니다.</div>
       <div id="pending" style="margin-top:6px"></div>
     </div>
     <div class="card">
@@ -446,6 +454,12 @@ const pad = n => String(n).padStart(2,'0');
 const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const todayStr = ymd(new Date());
 const DOW = ['일','월','화','수','목','금','토'];
+const LINKS = [   // 홈 아래 코트 예약 링크. 여기만 고치면 됩니다
+  { name: '비와이 테니스',          url: 'https://naver.me/GalHNGsb' },
+  { name: '광주 공공 체육시설 예약', url: 'https://gjcenter.gjcs.or.kr/fmcs/1' },
+  { name: '용인 공공 체육시설 예약', url: 'https://publicsports.yongin.go.kr/publicsports/sports/index.do' },
+  { name: '성남 공공 체육시설 예약', url: 'https://res.isdc.co.kr/index.do' },
+];
 const KIND   = { regular: '정기 모임', flash: '자유 모임' };   // 모임 종류 이름. 여기만 바꾸면 전체 적용
 const KINDS  = { regular: '정기',      flash: '자유' };        // 배지용 짧은 이름
 const EXP    = { '0-1':'1년 미만', '1-3':'1~3년', '3-5':'3~5년', '5+':'5년 이상' };
@@ -705,14 +719,15 @@ async function loadAdmin(){
     if (p.id === myId()) return memberRow(p, '<span class="muted" style="padding:6px">나</span>');
     let a = '';
     if (p.role === 'owner') return memberRow(p, '');
-    const rest = sb(p.status==='blocked' ? '휴식 해제' : '휴식', `setStatus('${p.id}','${p.status==='blocked'?'approved':'blocked'}')`);
-    const del  = sb('삭제', `deleteMember('${p.id}','${esc(p.name)}')`);
+    const rest  = sb(p.status==='blocked' ? '휴식 해제' : '휴식', `setStatus('${p.id}','${p.status==='blocked'?'approved':'blocked'}')`);
+    const del   = sb('삭제', `deleteMember('${p.id}','${esc(p.name)}')`);
+    const grade = p.role==='member' ? sb(p.is_guest ? '회원으로' : '게스트로', `setGuest('${p.id}',${p.is_guest ? 'false' : 'true'})`, p.is_guest ? 'primary' : 'ghost') : '';
     if (isOwner()){
-      a += sb(p.role==='admin' ? '관리자 해제' : '관리자 지정', `setRole('${p.id}','${p.role==='admin'?'member':'admin'}')`);
-      if (p.role === 'admin') a += sb('대표 넘기기', `transferOwner('${p.id}','${esc(p.name)}')`);
+      if (p.role === 'admin') a += sb('관리자 해제', `setRole('${p.id}','member')`) + sb('대표 넘기기', `transferOwner('${p.id}','${esc(p.name)}')`);
+      else { a += grade; if (!p.is_guest) a += sb('관리자 지정', `setRole('${p.id}','admin')`); }
       a += rest + del;
     } else if (p.role !== 'admin') {
-      a += rest + del;
+      a += grade + rest + del;
     }
     return memberRow(p, a);
   }).join('') || '<div class="empty">회원이 없어요</div>';
@@ -730,9 +745,14 @@ async function transferOwner(id, name){
   state.user.role = 'admin'; renderUser(); toast(`${name} 님이 대표가 되었습니다`); loadAdmin();
 }
 async function setRole(id, role){
-  const { error } = await db.from('profiles').update({ role }).eq('id', id);
+  const { error } = await db.from('profiles').update(role === 'admin' ? { role, is_guest: false } : { role }).eq('id', id);
   if (error) return showError(error);
   toast(role==='admin' ? '관리자로 지정했습니다' : '관리자를 해제했습니다'); loadAdmin();
+}
+async function setGuest(id, guest){
+  const { error } = await db.from('profiles').update({ is_guest: guest }).eq('id', id);
+  if (error) return showError(error);
+  toast(guest ? '게스트로 바꿨습니다' : '회원으로 올렸습니다'); loadAdmin();
 }
 async function setStatus(id, status){
   const { error } = await db.from('profiles').update({ status }).eq('id', id);
@@ -852,6 +872,12 @@ function showView(name){
   if (name==='admin') loadAdmin();
 }
 function showCalendar(){ showView('calendar'); }
+function openLink(i){
+  const l = LINKS[i]; if (!l) return;
+  if (!confirm(`${l.name} 사이트로 이동할까요?\n새 탭이 열립니다.`)) return;
+  const w = window.open(l.url, '_blank', 'noopener');
+  if (!w) location.href = l.url;   // 팝업 차단 시
+}
 function setStartView(v){
   localStorage.setItem('startView', v);
   document.querySelectorAll('#startSeg button').forEach(b => b.classList.toggle('active', b.dataset.v===v));
@@ -899,11 +925,12 @@ async function loadHome(){
       <div class="title"><span class="badge ${m.kind}">${KINDS[m.kind]||''}</span>${esc(m.title)}</div>
       <div class="muted">${fmtDate(m.date)} · ${esc(m.location||'')} · ${m.participants?.[0]?.count||0}명 참가</div>
     </div>`).join('') : '<div class="empty">아직 지난 모임이 없어요</div>';
+  $('links').innerHTML = LINKS.map((l, i) => `<div class="link" onclick="openLink(${i})"><span>${esc(l.name)}</span><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></div>`).join('');
   const sv = localStorage.getItem('startView') || 'home';
   document.querySelectorAll('#startSeg button').forEach(b => b.classList.toggle('active', b.dataset.v===sv));
   $('profileNotice').classList.toggle('hidden', !state.user || complete(state.user));
   $('logoutRow').classList.toggle('hidden', !state.user);
-  if (state.user) $('logoutWho').textContent = `${state.user.name} (${state.user.is_guest ? '게스트' : '카카오'})`;
+  if (state.user) $('logoutWho').textContent = `${state.user.name} (${isOwner() ? '대표' : isAdmin() ? '관리자' : state.user.is_guest ? '게스트' : '회원'})`;
   const an = $('approvalNotice');
   if (state.user && !approved()){
     an.classList.remove('hidden');
