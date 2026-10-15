@@ -548,6 +548,10 @@
     <div class="opts" id="optGender"></div>
     <label>생년 <span class="muted" style="font-weight:400">(뒤 두 자리)</span></label>
     <input id="fBirth" inputmode="numeric" maxlength="2" placeholder="예: 88" style="width:120px">
+    <div class="row hidden" id="linkRow" style="margin-top:14px;padding:10px 12px;background:var(--soft);border-radius:12px">
+      <div><strong style="font-size:14px">카카오 계정 연결</strong><div class="muted">연결하면 카카오로도 이 계정에 로그인됩니다</div></div>
+      <button class="kakao" style="width:auto;margin:0;padding:9px 12px;font-size:13px" onclick="linkKakao()">연결</button>
+    </div>
     <div class="row hidden" id="crownRow" style="margin-top:14px;padding:10px 12px;background:var(--soft);border-radius:12px">
       <div><strong style="font-size:14px">대표 별 표시 <span class="star">★</span></strong><div class="muted">이름 옆에 작은 별을 보여 줍니다</div></div>
       <div class="seg"><button type="button" data-v="on" onclick="setCrown(true)">켬</button><button type="button" data-v="off" onclick="setCrown(false)">끔</button></div>
@@ -711,7 +715,10 @@ async function setUser(u){
     db.from('profile_private').select('phone').eq('id', u.id).maybeSingle()
   ]);
   if (data) data.phone = pv.data ? pv.data.phone : null;
+  const ids = (u.identities || []).map(i => i.provider);
+  const byPhone = /^guest-\d+@guest\.bytennis\.app$/.test(u.email || '');
   const meta = u.user_metadata || {};
+  if (data){ data.byPhone = byPhone; data.hasKakao = ids.includes('kakao'); }
   state.user = data || { id: u.id, role: 'member',
     name: meta.name || meta.full_name || meta.preferred_username || '회원',
     avatar_url: meta.avatar_url || meta.picture || null };
@@ -780,6 +787,15 @@ const pick = { experience: null, gender: null };
 function renderOpts(id, map, key){
   $(id).innerHTML = Object.entries(map).map(([v,l]) => `<button type="button" class="${pick[key]===v?'on':''}" onclick="pick.${key}='${v}';renderOpts('${id}',${key==='experience'?'EXP':key==='gender'?'GENDER':'AGE'},'${key}')">${l}</button>`).join('');
 }
+async function linkKakao(){
+  if (!confirm('지금 로그인한 계정에 카카오를 연결할까요?\n카카오 로그인 화면으로 이동합니다.')) return;
+  const { error } = await db.auth.linkIdentity({ provider: 'kakao', options: { redirectTo: location.origin + location.pathname, scopes: 'profile_nickname profile_image' } });
+  if (error){
+    if (/manual linking|not enabled|disabled/i.test(error.message)) return toast('Supabase에서 계정 연결(Manual linking)을 켜야 해요');
+    if (/already|exists/i.test(error.message)) return toast('이 카카오 계정은 이미 다른 회원과 연결돼 있어요. 관리자에게 문의하세요');
+    showError(error);
+  }
+}
 function openGuest(){ $('guestModal').classList.add('open'); setTimeout(()=>$('gName').focus(), 50); }
 function closeGuest(){ $('guestModal').classList.remove('open'); }
 async function guestAuth(){
@@ -816,6 +832,7 @@ function openProfile(onboard){
   $('fAdminCode').placeholder = isAdmin() ? '대표 코드' : '관리자 코드';
   $('claimDesc').textContent = isAdmin() ? '대표 코드를 입력하면 대표가 됩니다. 기존 대표는 관리자가 됩니다.' : '관리자에게 받은 코드를 입력하면 관리자 권한이 생깁니다.';
   $('crownRow').classList.toggle('hidden', !isOwner());
+  $('linkRow').classList.toggle('hidden', !(u.byPhone && !u.hasKakao) || !!onboard);
   setCrown(u.show_crown !== false);
   $('fName').value = u.name; $('fAdminCode').value = '';
   pick.experience = u.experience || null; pick.gender = u.gender || null;

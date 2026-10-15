@@ -34,6 +34,7 @@
 
 ## 전화번호 로그인
 카카오 계정이 없는 사람은 로그인 창의 "게스트로 참여"에서 이름과 전화번호로 등록합니다. 같은 이름과 번호로 다른 폰에서도 로그인됩니다.
+전화번호 계정은 내 정보의 "카카오 계정 연결"로 카카오를 붙일 수 있습니다(Supabase → Authentication → Settings 의 **Allow manual linking** 을 켜야 함).
 이 기능을 쓰려면 Supabase → Authentication → Providers → Email 에서 **Confirm email 을 꺼야** 합니다.
 
 ## 등급
