@@ -262,6 +262,10 @@
     <div class="card">
       <strong>참가자 <span id="pCount" class="muted"></span></strong>
       <div class="people" id="people"></div>
+      <div id="pendingBox" class="hidden" style="margin:-4px 0 12px;padding:10px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px">
+        <div style="font-size:13px;font-weight:700;color:#92400e">신청 대기 <span id="pendCount"></span></div>
+        <div id="pendingList" style="margin-top:6px"></div>
+      </div>
       <button class="primary" id="joinBtn" style="width:100%;margin-top:4px" onclick="toggleJoin()">참가</button>
     </div>
     <div class="card">
@@ -353,6 +357,12 @@
       </div>
       <input id="fCapacity" type="number" min="2" placeholder="명" style="width:90px" class="hidden">
     </div>
+    <label>참가 방식</label>
+    <div class="seg" id="joinSeg">
+      <button type="button" data-v="auto" onclick="setJoinMode('auto')">자동 승인</button>
+      <button type="button" data-v="approve" onclick="setJoinMode('approve')">신청 후 승인</button>
+    </div>
+    <div class="muted" id="joinHint"></div>
     <label>메모</label>
     <textarea id="fNote" placeholder="회비, 준비물 등"></textarea>
     <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
@@ -723,7 +733,7 @@ function memberRow(p, actions){
   const info = ([EXP[p.experience], GENDER[p.gender], born(p.birth_year), phones[p.id] ? fmtPhone(phones[p.id]) : ''].filter(Boolean).join(' · ') || '프로필 미입력')
     + ` · 참가 ${j.total}회` + (j.upcoming ? ` (예정 ${j.upcoming})` : '');
   const tags = (p.role==='owner' ? '<span class="adminBadge">대표 ★</span>' : p.role==='admin' ? '<span class="adminBadge" style="background:var(--soft);color:var(--muted)">관리자</span>' : '')
-    + (p.is_guest ? '<span class="adminBadge" style="background:#e0f2fe;color:#075985">게스트</span>' : '')
+    + (p.is_guest ? '<span class="adminBadge" style="background:#e0f2fe;color:#075985">게스트</span>' : (p.role==='member' ? '<span class="adminBadge" style="background:#dcfce7;color:#166534">회원</span>' : ''))
     + (p.status==='blocked' ? '<span class="adminBadge" style="background:#fee2e2;color:#991b1b">휴식</span>' : '');
   return `<div class="member">
       ${p.avatar_url ? `<img src="${esc(https(p.avatar_url))}" alt="">` : '<img alt="">'}
@@ -801,7 +811,7 @@ async function loadMonth(){
   const first = new Date(state.year, state.month, 1);
   const last  = new Date(state.year, state.month+1, 0);
   const { data, error } = await db.from('meetups')
-    .select('*, participants(count)')
+    .select('*, participants(status)')
     .gte('date', ymd(first)).lte('date', ymd(last))
     .order('date').order('start_time');
   if (error) showError(error); else $('banner').classList.add('hidden');
@@ -848,7 +858,7 @@ function renderDayList(){
   box.innerHTML = list.map(m => `
     <div class="item" onclick="openDetail('${m.id}')">
       <div class="title"><span class="badge ${m.kind}">${KINDS[m.kind]||''}</span>${esc(m.title)}</div>
-      <div class="muted">${fmtTime(m.start_time)} · ${esc(m.location||'장소 미정')} · ${cnt(m.participants?.[0]?.count||0, m.capacity)}</div>
+      <div class="muted">${fmtTime(m.start_time)} · ${esc(m.location||'장소 미정')} · ${cnt(apCount(m), m.capacity)}</div>
     </div>`).join('');
 }
 
@@ -860,8 +870,13 @@ async function openCreate(){
   const kinds = isAdmin() ? ['flash','regular'] : ['flash'];
   $('fKind').innerHTML = kinds.map(k => `<option value="${k}">${KIND[k]}</option>`).join('');
   $('kindHint').textContent = isAdmin() ? '' : `${KIND.regular}은 관리자만 만들 수 있어요.`;
-  $('fDate').value = state.selected; setCap('none'); $('createModal').classList.add('open'); $('fTitle').focus();
+  $('fDate').value = state.selected; setCap('none'); setJoinMode('auto'); $('createModal').classList.add('open'); $('fTitle').focus();
 }
+function setJoinMode(v){
+  document.querySelectorAll('#joinSeg button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+  $('joinHint').textContent = v === 'approve' ? '신청이 들어오면 주최자나 관리자가 승인해야 명단에 올라갑니다.' : '누르는 즉시 참가됩니다.';
+}
+const apCount = m => (m.participants || []).filter(p => p.status !== 'pending').length;
 function setCap(v){
   document.querySelectorAll('#capSeg button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
   $('fCapacity').classList.toggle('hidden', v !== 'limit');
@@ -879,7 +894,7 @@ function openEdit(){
   $('kindHint').textContent = '';
   $('fTitle').value = m.title; $('fDate').value = m.date; $('fTime').value = m.start_time ? m.start_time.slice(0,5) : '';
   $('fLocation').value = m.location || ''; $('fCourts').value = m.courts || ''; $('fNote').value = m.note || '';
-  $('fCapacity').value = m.capacity || ''; setCap(m.capacity ? 'limit' : 'none');
+  $('fCapacity').value = m.capacity || ''; setCap(m.capacity ? 'limit' : 'none'); setJoinMode(m.join_mode || 'auto');
   state.editId = m.id; $('createTitle').textContent = '모임 수정'; $('createSubmit').textContent = '저장';
   $('createModal').classList.add('open');
 }
@@ -889,7 +904,8 @@ async function submitCreate(){
     start_time: $('fTime').value || null, location: $('fLocation').value.trim(),
     courts: +$('fCourts').value || null,
     capacity: document.querySelector('#capSeg button.active')?.dataset.v === 'limit' ? (+$('fCapacity').value || null) : null,
-    note: $('fNote').value.trim() || null, created_by: state.user.name, created_by_id: myId()
+    note: $('fNote').value.trim() || null, created_by: state.user.name, created_by_id: myId(),
+    join_mode: document.querySelector('#joinSeg button.active')?.dataset.v || 'auto'
   };
   if (!row.title || !row.date) return toast('제목과 날짜를 입력하세요');
   if (!row.location) return toast('장소를 입력하세요');
@@ -944,21 +960,21 @@ async function loadHome(){
   const t = new Date(); const in14 = new Date(); in14.setDate(t.getDate()+14);
   const mFirst = new Date(t.getFullYear(), t.getMonth(), 1), mLast = new Date(t.getFullYear(), t.getMonth()+1, 0);
   const [up, past, month] = await Promise.all([
-    db.from('meetups').select('*, participants(name,user_id)').gte('date', todayStr).lte('date', ymd(in14)).order('date').order('start_time'),
-    db.from('meetups').select('*, participants(count)').lt('date', todayStr).order('date', {ascending:false}).limit(3),
+    db.from('meetups').select('*, participants(name,user_id,status)').gte('date', todayStr).lte('date', ymd(in14)).order('date').order('start_time'),
+    db.from('meetups').select('*, participants(status)').lt('date', todayStr).order('date', {ascending:false}).limit(3),
     db.from('meetups').select('id', {count:'exact', head:true}).gte('date', ymd(mFirst)).lte('date', ymd(mLast))
   ]);
   const err = up.error || past.error || month.error;
   if (err) showError(err); else $('banner').classList.add('hidden');
   const ups = up.data || [];
-  const mine = ups.filter(m => m.participants.some(p=>p.user_id===myId()));
+  const mine = ups.filter(m => m.participants.some(p=>p.user_id===myId() && p.status!=='pending'));
   const next = ups[0];
   $('hero').innerHTML = `<div class="hello">${state.user ? esc(state.user.name)+'님, 안녕하세요 👋' : CLUB_NAME+'에 오신 것을 환영합니다'}</div>` + (next
     ? `<div class="next" onclick="openDetail('${next.id}')">
         <div class="lbl">다음 모임 · ${dday(next.date)}</div>
         <div class="ttl">${esc(next.title)}</div>
         <div class="sub">${fmtDate(next.date)} ${fmtTime(next.start_time)} · ${esc(next.location||'장소 미정')}</div>
-        <span class="cnt">${cnt(next.participants.length, next.capacity)} 참가${next.participants.some(p=>p.user_id===myId())?' · 참가중':''}</span>
+        <span class="cnt">${cnt(apCount(next), next.capacity)} 참가${next.participants.some(p=>p.user_id===myId() && p.status!=='pending')?' · 참가중':next.participants.some(p=>p.user_id===myId())?' · 신청 중':''}</span>
       </div>`
     : `<div class="next empty"><div class="ttl">예정된 모임이 없어요</div><div class="sub">모임을 만들어 사람들을 모아 보세요</div></div>`);
   $('tiles').innerHTML = `
@@ -967,18 +983,19 @@ async function loadHome(){
     <div class="tile"><b>${mine.length}</b><span>내 참가 예정</span></div>`;
   $('upcoming').innerHTML = ups.length ? ups.map(m => {
     const [,mo,d] = m.date.split('-'); const dow = DOW[new Date(m.date+'T00:00').getDay()];
-    const joined = m.participants.some(p=>p.user_id===myId());
+    const me = m.participants.find(p=>p.user_id===myId());
+    const joined = !!me && me.status !== 'pending';
     return `<div class="up" onclick="openDetail('${m.id}')">
       <div class="d"><b>${+d}</b><small>${+mo}월 ${dow}</small></div>
       <div class="t"><div class="title"><span class="badge ${m.kind}">${KINDS[m.kind]||''}</span>${esc(m.title)}</div>
-        <div class="muted">${fmtTime(m.start_time)} · ${esc(m.location||'장소 미정')} · ${cnt(m.participants.length, m.capacity)}</div></div>
-      ${joined?'<span class="joined">참가중</span>':''}
+        <div class="muted">${fmtTime(m.start_time)} · ${esc(m.location||'장소 미정')} · ${cnt(apCount(m), m.capacity)}</div></div>
+      ${joined?'<span class="joined">참가중</span>':(me?'<span class="joined" style="background:#fef3c7;color:#92400e">신청 중</span>':'')}
     </div>`; }).join('') : '<div class="empty"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><div>앞으로 2주 안에 예정된 모임이 없어요</div></div>';
   const pasts = past.data || [];
   $('recent').innerHTML = pasts.length ? pasts.map(m => `
     <div class="item" onclick="openDetail('${m.id}')">
       <div class="title"><span class="badge ${m.kind}">${KINDS[m.kind]||''}</span>${esc(m.title)}</div>
-      <div class="muted">${fmtDate(m.date)} · ${esc(m.location||'')} · ${m.participants?.[0]?.count||0}명 참가</div>
+      <div class="muted">${fmtDate(m.date)} · ${esc(m.location||'')} · ${apCount(m)}명 참가</div>
     </div>`).join('') : '<div class="empty">아직 지난 모임이 없어요</div>';
   $('links').innerHTML = LINKS.map((l, i) => `<div class="link" onclick="openLink(${i})"><span>${esc(l.name)}</span><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></div>`).join('');
   const sv = localStorage.getItem('startView') || 'home';
@@ -1001,6 +1018,8 @@ async function openDetail(id){
   const { data, error } = await db.from('meetups').select('*, host:profiles!meetups_created_by_profile_fk(name,experience,gender,birth_year,role,show_crown), participants(*, profiles(name,experience,gender,birth_year,role,show_crown)), matches(*)').eq('id', id).single();
   if (error) return showError(error);
   data.participants.sort((a,b)=>a.created_at.localeCompare(b.created_at));
+  data.pending = data.participants.filter(p => p.status === 'pending');
+  data.participants = data.participants.filter(p => p.status !== 'pending');
   data.matches.sort((a,b)=>a.round-b.round || a.court-b.court);
   showView('detail');
   state.current = data;
@@ -1015,6 +1034,7 @@ function renderDetail(){
       <div><span>장소</span><b>${esc(m.location||'미정')}</b></div>
       <div><span>코트</span><b>${m.courts ? m.courts+'면' : '미정'}</b></div>
       <div><span>인원</span><b>${capText(m.capacity)}</b></div>
+      <div><span>참가</span><b>${m.join_mode === 'approve' ? '신청 후 승인' : '자동 승인'}</b></div>
       <div><span>주최</span><b>${esc(m.host ? fmtName(m.host) : (m.created_by||'-'))}</b></div>
       ${m.note?`<div><span>메모</span><b style="white-space:pre-wrap;font-weight:400">${esc(m.note)}</b></div>`:''}
     </div>`;
@@ -1024,11 +1044,21 @@ function renderDetail(){
   $('people').innerHTML = m.participants.length
     ? m.participants.map(p=>`<span class="person ${p.user_id===myId()?'me':''}">${esc(fmtName(p))}${manage && p.user_id!==myId() ? `<span class="x" title="참가 취소시키기" onclick="removeParticipant('${p.id}','${esc(p.profiles?.name || p.name)}')">&times;</span>` : ''}</span>`).join('')
     : '<span class="muted">아직 없음</span>';
-  const joined = m.participants.some(p=>p.user_id===myId());
-  $('joinBtn').textContent = joined ? '참가 취소' : '참가';
-  $('joinBtn').className = joined ? 'ghost' : 'primary';
-  $('joinBtn').disabled = !joined && !!m.capacity && names.length >= m.capacity;
-  $('joinBtn').textContent = (!joined && m.capacity && names.length >= m.capacity) ? '정원 마감' : $('joinBtn').textContent;
+  // 신청 대기 목록
+  const pend = m.pending || [];
+  $('pendingBox').classList.toggle('hidden', !pend.length);
+  $('pendCount').textContent = pend.length ? `${pend.length}명` : '';
+  $('pendingList').innerHTML = pend.map(p => `
+    <div class="row" style="padding:4px 0">
+      <span style="font-size:14px;font-weight:600">${esc(fmtName(p))}${p.user_id===myId()?' <span class="muted">(나)</span>':''}</span>
+      ${manage ? `<span style="display:flex;gap:4px">${sb('승인', `approveParticipant('${p.id}')`, 'primary')}${sb('거절', `removeParticipant('${p.id}','${esc(p.profiles?.name || p.name)}')`)}</span>` : ''}
+    </div>`).join('');
+  const mineP = m.participants.find(p=>p.user_id===myId()) || pend.find(p=>p.user_id===myId());
+  const joined = !!mineP && mineP.status !== 'pending';
+  const full = !mineP && !!m.capacity && names.length >= m.capacity;
+  $('joinBtn').textContent = mineP ? (joined ? '참가 취소' : '신청 취소') : full ? '정원 마감' : (m.join_mode === 'approve' && !manage ? '참가 신청' : '참가');
+  $('joinBtn').className = mineP ? 'ghost' : 'primary';
+  $('joinBtn').disabled = full;
   $('deleteBtn').classList.toggle('hidden', !manage);
   $('editBtn').classList.toggle('hidden', !manage);
   $('genBtn').classList.toggle('hidden', !manage);
@@ -1044,14 +1074,20 @@ function renderDetail(){
 async function toggleJoin(){
   if(!requireLogin(toggleJoin)) return;
   const m = state.current;
-  const mine = m.participants.find(p=>p.user_id===myId());
+  const mine = m.participants.find(p=>p.user_id===myId()) || (m.pending||[]).find(p=>p.user_id===myId());
   if (!mine && !(await requireApproved())) return;
   const { error } = mine
     ? await db.from('participants').delete().eq('id', mine.id)
     : await db.from('participants').insert({ meetup_id: m.id, user_id: myId(), name: state.user.name });
   if (error) return showError(error);
-  toast(mine ? '참가를 취소했습니다' : '참가했습니다');
+  const requested = !mine && m.join_mode === 'approve' && !canManage(m);
+  toast(mine ? (mine.status === 'pending' ? '신청을 취소했습니다' : '참가를 취소했습니다') : requested ? '참가 신청했어요. 주최자가 승인하면 명단에 올라가요' : '참가했습니다');
   openDetail(m.id);
+}
+async function approveParticipant(id){
+  const { error } = await db.from('participants').update({ status: 'approved' }).eq('id', id);
+  if (error) return showError(error);
+  toast('승인했습니다'); openDetail(state.current.id);
 }
 async function removeParticipant(id, name){
   if (!confirm(`${name} 님을 참가 명단에서 뺄까요?`)) return;
