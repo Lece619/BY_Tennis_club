@@ -114,12 +114,18 @@
   .strip .lbl{flex:none;font-size:11px;font-weight:800;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:2px 7px}
   .strip .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
   .person{cursor:pointer}
-  .mstat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
-  .mstat div{background:var(--soft);border-radius:12px;padding:10px 6px;text-align:center}
-  .mstat b{display:block;font-size:20px;font-weight:800}
-  .mstat span{font-size:11px;color:var(--muted)}
-  .mrow{display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
-  .mrow span:first-child{color:var(--muted)}
+  .mcard{border-radius:18px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow)}
+  .mcard .mhead{background:linear-gradient(135deg,#c8161f,#8e0f16);color:#fff;padding:18px 16px;display:flex;align-items:center;gap:14px}
+  .mcard .mhead .avatar-lg{width:60px;height:60px;box-shadow:0 0 0 3px rgba(255,255,255,.35)}
+  .mcard .mhead .nm{font-size:19px;font-weight:800;letter-spacing:-.02em}
+  .mcard .mhead .gr{font-size:12px;opacity:.9;margin-top:2px}
+  .mcard .mgrid{display:grid;grid-template-columns:repeat(3,1fr);background:var(--card)}
+  .mcard .mgrid div{padding:14px 6px;text-align:center;border-right:1px solid var(--line)}
+  .mcard .mgrid div:last-child{border-right:none}
+  .mcard .mgrid span{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
+  .mcard .mgrid b{font-size:15px;font-weight:700}
+  .mcard .mfoot{padding:10px 14px;border-top:1px solid var(--line);font-size:13px;color:var(--muted);background:var(--card)}
+  .member .nm{cursor:pointer}
   .adminBadge{font-size:11px;background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 7px;margin-left:4px;vertical-align:middle;font-weight:700}
   /* home */
   .hero{background:linear-gradient(135deg,#c8161f 0%,#8e0f16 100%);color:#fff;border-radius:20px;padding:18px 18px 16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(142,15,22,.25);position:relative;overflow:hidden}
@@ -965,7 +971,7 @@ function memberRow(p, actions){
     + (p.status==='blocked' ? '<span class="adminBadge" style="background:#fee2e2;color:#991b1b">휴식</span>' : '');
   return `<div class="member">
       ${p.avatar_url ? `<img src="${esc(https(p.avatar_url))}" alt="">` : '<img alt="">'}
-      <div class="nm">${esc(p.name)}${tags}<div class="muted" style="font-size:12px">${info}</div></div>
+      <div class="nm" onclick="openMember('${p.id}')">${esc(p.name)}${tags}<div class="muted" style="font-size:12px">${info}</div></div>
       <div style="display:flex;gap:4px;flex:none;flex-wrap:wrap;justify-content:flex-end;max-width:52%">${actions}</div>
     </div>`;
 }
@@ -1266,44 +1272,35 @@ async function openMember(uid){
   if (!uid) return;
   $('memberBody').innerHTML = '<div class="empty">불러오는 중…</div>';
   $('memberModal').classList.add('open');
-  const [pr, pj, mt, pv] = await Promise.all([
+  const [pr, pv] = await Promise.all([
     db.from('profiles').select('*').eq('id', uid).maybeSingle(),
-    db.from('participants').select('status, meetups(date)').eq('user_id', uid),
-    db.from('matches').select('team_a,team_b,score_a,score_b').or(`team_a.cs.{${uid}},team_b.cs.{${uid}}`),
     isAdmin() ? db.from('profile_private').select('phone').eq('id', uid).maybeSingle() : Promise.resolve({ data: null })
   ]);
   const u = pr.data; if (!u){ $('memberBody').innerHTML = '<div class="empty">회원 정보를 찾을 수 없어요</div>'; return; }
-  const joins = (pj.data || []).filter(x => x.status !== 'pending');
-  const total = joins.length, upcoming = joins.filter(x => x.meetups && x.meetups.date >= todayStr).length;
-  let w = 0, l = 0;
-  (mt.data || []).forEach(x => {
-    if (x.score_a == null || x.score_b == null) return;
-    const inA = (x.team_a || []).includes(uid);
-    const win = inA ? x.score_a > x.score_b : x.score_b > x.score_a;
-    const lose = inA ? x.score_a < x.score_b : x.score_b < x.score_a;
-    if (win) w++; if (lose) l++;
-  });
   const grade = u.role === 'owner' ? '대표 ★' : u.role === 'admin' ? '관리자' : u.is_guest ? '게스트' : '회원';
-  const rows = [
-    ['등급', grade],
-    ['구력', EXP[u.experience] || '미입력'],
-    ['성별', GENDER[u.gender] || '미입력'],
-  ];
-  if (isAdmin()){
-    rows.push(['생년', u.birth_year ? `${u.birth_year}년 (${age(u.birth_year)}세)` : '미입력']);
-    rows.push(['전화번호', pv.data && pv.data.phone ? fmtPhone(pv.data.phone) : '미입력']);
-  } else if (state.displayFormat !== 'name' && u.birth_year) rows.push(['나이', `${age(u.birth_year)}세`]);
+  const initial = esc((u.name || '?').slice(0, 1));
   $('memberBody').innerHTML = `
-    <div style="display:flex;align-items:center;gap:12px">
-      ${u.avatar_url ? `<img class="avatar-lg" src="${esc(https(u.avatar_url))}" alt="">` : '<div class="avatar-lg" style="display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--muted)">' + esc((u.name||'?').slice(0,1)) + '</div>'}
-      <div><div style="font-weight:800;font-size:17px">${esc(u.name)}${crown(u)}</div><div class="muted">${grade}${u.id === myId() ? ' · 나' : ''}</div></div>
+    <div class="mcard">
+      <div class="mhead">
+        ${u.avatar_url ? `<img class="avatar-lg" src="${esc(https(u.avatar_url))}" alt="">` : `<div class="avatar-lg" style="display:flex;align-items:center;justify-content:center;font-weight:800;font-size:22px;background:rgba(255,255,255,.2);color:#fff">${initial}</div>`}
+        <div><div class="nm">${esc(u.name)}${crown(u)}</div><div class="gr">${grade}${u.id === myId() ? ' · 나' : ''}</div></div>
+      </div>
+      <div class="mgrid">
+        <div><span>구력</span><b>${EXP[u.experience] || '-'}</b></div>
+        <div><span>성별</span><b>${GENDER[u.gender] || '-'}</b></div>
+        <div><span>나이</span><b>${u.birth_year ? age(u.birth_year) + '세' : '-'}</b></div>
+      </div>
+      ${isAdmin() ? `<div class="mfoot">${u.birth_year ? u.birth_year + '년생' : '생년 미입력'} · ${pv.data && pv.data.phone ? fmtPhone(pv.data.phone) : '전화번호 미입력'}</div>` : ''}
     </div>
-    <div class="mstat">
-      <div><b>${total}</b><span>참가 횟수</span></div>
-      <div><b>${upcoming}</b><span>예정</span></div>
-      <div><b>${w}승 ${l}패</b><span>전적</span></div>
-    </div>
-    <div style="margin-top:12px">${rows.map(([k,v]) => `<div class="mrow"><span>${k}</span><span>${esc(v)}</span></div>`).join('')}</div>`;
+    ${isOwner() ? `<div style="margin-top:14px"><div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px">구력 수정 <span style="font-weight:400">(대표만)</span></div>
+      <div class="opts">${Object.entries(EXP).map(([v,l]) => `<button type="button" class="${u.experience===v?'on':''}" onclick="setMemberExp('${u.id}','${v}')">${l}</button>`).join('')}</div></div>` : ''}`;
+}
+async function setMemberExp(uid, exp){
+  const { error } = await db.from('profiles').update({ experience: exp }).eq('id', uid);
+  if (error) return showError(error);
+  toast('구력을 바꿨습니다'); openMember(uid);
+  if (state.view === 'admin') loadAdmin();
+  if (state.view === 'detail' && state.current) openDetail(state.current.id, true);
 }
 
 // ===== 댓글 =====
