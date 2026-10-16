@@ -1,71 +1,83 @@
 # BY 테니스 클럽 사이트
 
-달력에서 정기 모임과 자유 모임을 만들고, 참가 신청과 복식 대진표, 결과 기록까지 되는 한 장짜리 웹 페이지입니다.
+테니스 모임 운영용 모바일 웹앱. 달력·모임 생성·참가 신청·복식 대진표·점수·댓글·공지·회칙·건의·회원 등급 관리까지 한 파일(`index.html`)로 동작합니다.
 
-## 구성
-- `index.html` : 페이지 전체 (화면 + 동작). 상단 `CLUB_NAME` 에서 모임 이름을 바꿀 수 있습니다.
-- `schema.sql` : Supabase 테이블 생성 SQL (1단계)
-- `schema2_auth.sql` : 카카오 로그인 + 관리자 권한 SQL (2단계)
-- `schema3_admin_code.sql` : 관리자 코드 방식 SQL (3단계, 실행 전 코드 값 수정)
-- `schema4_profile.sql` : 회원 프로필 항목(구력·성별) SQL (4단계)
-- `schema5_guest_birth.sql` : 생년 + 게스트 등록 SQL (5단계)
-- `schema6_display.sql` : 이름 표시 방식 설정 SQL (6단계)
-- `schema7_create_rules.sql` : 모임 생성 규칙 SQL (7단계)
-- `schema8_meetup_options.sql` : 장소 필수, 코트 수 선택, 인원 제한 없음 SQL (8단계)
-- `schema9_nickname.sql` : 닉네임 중복 방지 SQL (9단계)
-- `schema10_approval.sql` : 회원 승인 + 관리자 인증 버그 수정 SQL (10단계)
-- `schema11_owner.sql` : 대표 역할, 대표 코드, 회원 삭제, 별 표시 SQL (11단계, 실행 전 대표 코드 수정)
-- `schema12_guest_default.sql` : 모든 신규 가입은 게스트로 시작 SQL (12단계)
-- `schema13_phone.sql` : 전화번호로 중복 가입 방지 SQL (13단계)
-- `schema14_host_edit.sql` : 주최자·참가자 이름을 프로필에서, 대진표 회원 ID 저장 SQL (14단계, 기존 대진표 삭제됨)
-- `schema15_join_mode.sql` : 모임별 참가 방식(자동 승인 / 신청 후 승인) SQL (15단계)
-- `schema16_guest_request.sql` : 게스트는 항상 신청 후 승인 + 관리자 스스로 내려오기 SQL (16단계)
-- `schema17_admin_request.sql` : 자유 모임은 생성자가 관리, 관리자도 신청 후 승인 거침 SQL (17단계)
-- `schema18_rules_suggestions.sql` : 회칙 본문 + 건의사항 SQL (18단계)
-- `schema19_rules_owner.sql` : 회칙 수정은 대표만 SQL (19단계)
-- `schema20_comments_notices.sql` : 모임 댓글 + 공지사항 SQL (20단계)
-- `schema21_guest_sync.sql` : 전화번호 계정 로그인 정보 동기화 SQL (21단계)
+| 항목 | 값 |
+|---|---|
+| 공개 주소 | https://lece619.github.io/BY_Tennis_club/ |
+| 저장소 | https://github.com/Lece619/BY_Tennis_club (main 브랜치 → GitHub Pages 자동 배포, 1~2분) |
+| 데이터 | Supabase 프로젝트 `wzjoiitmujirjtliwwjg` (공개 키는 index.html 상단, service_role 키는 절대 넣지 말 것) |
+| 로그인 | 카카오 OAuth(Supabase Kakao provider), 전화번호 계정(이름+번호 → 이메일/비밀번호로 변환) |
+| 상태 (2026-10-16) | SQL 1~21단계 전부 적용됨. 기능 개발 완료, 실사용 테스트 단계 |
 
-## 처음 한 번 할 일
-1. Supabase 대시보드 → 왼쪽 메뉴 **SQL Editor** → `schema.sql` 내용을 붙여넣고 **Run**
-2. 같은 곳에서 `schema2_auth.sql`, 이어서 `schema3_admin_code.sql`, `schema4_profile.sql`, `schema5_guest_birth.sql`, `schema6_display.sql`, `schema7_create_rules.sql`, `schema8_meetup_options.sql`, `schema9_nickname.sql`, `schema10_approval.sql`, `schema11_owner.sql`, `schema12_guest_default.sql`, `schema13_phone.sql`, `schema14_host_edit.sql`, `schema15_join_mode.sql`, `schema16_guest_request.sql`, `schema17_admin_request.sql`, `schema18_rules_suggestions.sql`, `schema19_rules_owner.sql`, `schema20_comments_notices.sql`, `schema21_guest_sync.sql` 도 **Run** (3단계 파일 안의 관리자 코드를 먼저 원하는 값으로 바꾸세요)
-3. Supabase → Authentication → Providers → Kakao 켜고 REST API 키와 클라이언트 시크릿 입력
-4. 카카오 개발자 콘솔 → 플랫폼 키 → REST API 키 → 리다이렉트 URI에 `https://<프로젝트>.supabase.co/auth/v1/callback` 등록
-5. 사이트에서 카카오 로그인 → 오른쪽 위 이름 → 내 정보 → **관리자 인증**에 코드 입력
+## 파일 구성
+- `index.html` : 화면 + 동작 전체. 상단 상수로 모임 이름(`CLUB_NAME`), 모임 종류 이름(`KIND`), 코트 예약 링크(`LINKS`) 수정
+- `schema*.sql` : Supabase SQL. 번호 순서대로 한 번씩만 실행하는 누적 변경 파일 (이미 모두 적용됨, 새 프로젝트를 만들 때만 처음부터 실행)
+- `manifest.json`, `icon-192.png`, `logo.png` : 홈 화면 추가(PWA) 아이콘
+- `테스트계정.md` : 로컬 전용(git 제외). 아래 "테스트 계정" 참고
 
-## 전화번호 로그인
-카카오 계정이 없는 사람은 로그인 창의 "게스트로 참여"에서 이름과 전화번호로 등록합니다. 다시 로그인할 때는 현재 닉네임과 현재 전화번호를 씁니다(바꾸면 바뀐 값으로).
-전화번호 계정은 내 정보의 "카카오 계정 연결"로 카카오를 붙일 수 있습니다(Supabase → Authentication → Settings 의 **Allow manual linking** 을 켜야 함).
-이 기능을 쓰려면 Supabase → Authentication → Providers → Email 에서 **Confirm email 을 꺼야** 합니다.
+## 수정하고 배포하는 법
+1. `index.html` 수정 → 로컬 확인은 폴더에서 `python -m http.server 8765` 후 http://localhost:8765
+2. `git add -A && git commit -m "..." && git push` → 1~2분 뒤 공개 주소에 반영
+3. DB 구조를 바꿀 때는 `schema22_*.sql` 처럼 새 번호 파일을 만들고 Supabase → SQL Editor 에서 Run (기존 파일은 수정하지 않음)
 
-## 등급
-가입(카카오·전화번호 모두) → 승인 대기 → 게스트(참가 가능) → 회원(자유 모임 생성 가능) → 관리자 → 대표.
-관리자가 하단 **관리** 탭에서 승인하고, 회원으로 올립니다. 로그인 방법은 등급과 무관합니다.
-카카오 가입자도 프로필에서 전화번호를 등록하며, 번호는 계정당 하나라 같은 번호로 게스트 가입을 또 할 수 없습니다.
+## Supabase 대시보드 설정 (코드 밖에서 켜 둔 것)
+- Authentication → Providers → **Kakao** 켜짐 (REST API 키 + Client Secret). 카카오 개발자 콘솔은 **개인 개발자 비즈 앱**으로 전환해 이메일 동의 항목 사용
+- Authentication → Providers → Email → **Confirm email 꺼짐** (전화번호 계정 즉시 생성용)
+- Authentication → URL Configuration → Site URL = 공개 주소
+- Authentication → Settings → **Allow manual linking** : 전화번호 계정에 카카오를 붙이는 "카카오 계정 연결" 버튼에 필요. 켜졌는지 미확인
+- 관리자 코드 / 대표 코드 : `app_settings` 테이블 (앱의 관리 탭에서 대표가 변경 가능)
 
-## 권한
-- 로그인 없이: 일정과 참가자, 대진표 보기
-- 게스트: 참가(또는 참가 신청)와 취소, 내 정보 수정 (모임 만들기는 불가)
-- 모임마다 참가 방식을 고릅니다. 자동 승인이면 회원은 즉시 참가, 신청 후 승인이면 회원도 신청. 게스트는 어떤 모임이든 항상 신청 후 승인
-- 회원: 자유 모임 만들기, 참가 신청과 취소, 내 정보 수정
-- 홈 아래 코트 예약 링크는 index.html 의 `LINKS` 에서 수정
-- 회칙은 홈 맨 아래 접이식 카드에 표시되며, 관리 탭 설정에서 대표가 수정
-- 건의하기: 회칙 카드 안의 버튼. 관리자에게만 보이고 관리 탭에서 처리 완료·삭제
-- 모임 댓글: 모임 상세 아래. 승인 회원·게스트 누구나 작성, 본인과 모임 관리자가 삭제
-- 공지사항: 상단 바의 종 아이콘. 관리자가 작성·수정·삭제·상단 고정. 새 공지가 있으면 종에 빨간 점, 홈 상단에 최신 공지 한 줄
-- 정기 모임 만들기: 관리자만
-- 자유 모임 주최자: 자기 모임의 수정·삭제, 참가 승인·거절, 대진 생성, 점수 입력을 혼자 관리 (관리자는 삭제만 가능)
-- 정기 모임: 주최자와 관리자가 함께 관리
-- 신청 후 승인 모임에서는 주최자 외 누구나(관리자·대표 포함) 신청 후 승인. 자기 신청은 스스로 승인 불가
-- 관리자(여러 명): 모든 모임에 주최자 권한, 가입 승인, 회원·게스트 휴식 처리·삭제, 이름 표시 방식 설정
-- 대표(한 명, 별 표시): 관리자 권한 + 관리자 지정·해제, 관리자 삭제, 대표 넘기기, 관리자 코드·대표 코드 변경. 관리자가 내 정보에서 대표 코드를 입력하면 대표가 됩니다.
+## 등급과 권한
+가입(카카오·전화번호 모두) → **승인 대기** → **게스트** → **회원** → **관리자**(여러 명) → **대표**(한 명, 이름 옆 ★)
 
-## 공개 주소로 올리기 (GitHub Pages)
-1. GitHub 에서 새 저장소 생성 (예: `tennis`)
-2. 이 폴더의 `index.html` 을 업로드
-3. 저장소 Settings → Pages → Branch 를 `main` 으로 선택 → Save
-4. 잠시 뒤 `https://아이디.github.io/tennis/` 로 접속
+| 등급 | 할 수 있는 것 |
+|---|---|
+| 로그인 안 함 | 일정, 참가자, 대진표, 공지, 회칙 보기 |
+| 승인 대기 | 보기만. 관리자가 관리 탭에서 승인 (20초마다 자동 갱신) |
+| 게스트 | 모임 참가 **신청**(항상 승인 필요), 댓글, 건의, 내 정보 |
+| 회원 | 자유 모임 만들기, 자동 승인 모임 즉시 참가 |
+| 관리자 | 가입 승인, 회원↔게스트 전환, 휴식·삭제(회원·게스트), 정기 모임 생성·관리, 공지 작성, 이름 표시 방식 설정 |
+| 대표 | 관리자 권한 + 관리자 지정·해제·삭제, 대표 넘기기, 관리자·대표 코드 변경, 회칙 수정, 회원 구력 수정, 별 표시 켜고 끄기 |
 
-## 참고
-- 관리자을 SQL로 직접 지정하려면: `update profiles set role = 'admin' where name = '이름';`
-- Supabase의 service_role 키는 절대 저장소나 페이지에 넣지 마세요.
+- 관리자 되기: 내 정보에서 이름 영역을 **5번 연속 탭** → 관리자 코드 입력. 관리자가 같은 방법으로 대표 코드를 넣으면 대표가 됨(기존 대표는 관리자로)
+- **자유 모임은 생성자가 왕**: 수정·참가 승인·대진·점수는 만든 사람만. 관리자는 삭제만 가능(안전장치)
+- **정기 모임**: 관리자만 생성, 주최자와 관리자가 함께 관리
+- 모임마다 참가 방식: 자동 승인(회원 즉시) / 신청 후 승인(주최자 외 모두 신청, 자기 신청은 승인 불가)
+- 닉네임 중복 불가(가입 시 자동 번호), 전화번호 계정당 하나(중복 가입 방지)
+- 전화번호 계정은 **현재 닉네임 + 현재 번호**로 로그인 (바꾸면 서버가 로그인 정보를 함께 갱신)
+
+## 화면 구성
+- 하단 탭: 홈 / 달력 / (관리: 관리자만) / 내 정보. 상단 바: 종 아이콘(공지, 새 공지면 빨간 점)
+- 홈: 다음 모임 카드, 숫자 타일, 다가오는 모임(전체·정기·자유 필터), 지난 모임(접힘), 회칙(접힘, 안에 건의하기), 코트 예약 링크
+- 달력: 정기 모임 날짜는 파란 테두리. 날짜 누르면 그날 모임 목록
+- 모임 상세: 정보, 참가자(주최자 빨간 칩, 게스트 꼬리표, 칩 누르면 회원 카드), 신청 대기, 대진표(자동 생성 + 수동 편집·코트 지정·초기화), 결과 표, 댓글
+- 내 정보: 닉네임·전화번호·구력·성별·생년 + 계정 섹션(첫 화면, 별 표시, 카카오 연결, 관리자 내려놓기, 로그아웃)
+- 관리 탭: 승인 대기, 회원 목록(등급 버튼 + 관리 → 회원 카드 안에 휴식·삭제·관리자 지정), 건의사항, 설정(이름 표시 방식, 대표 전용: 회칙·코드 변경)
+- 폰 뒤로가기 지원, 스크롤바 밀림 방지, 데스크톱 호버
+
+## 테스트 계정 (더미, 가짜 번호)
+로그인 창 → 게스트로 참여 → 이름과 번호 입력. 비밀번호는 `sha256("번호:이름:BY-TENNIS")` 로 만들어지며 코드에서 자동 처리됨.
+
+| 이름 | 번호 | 등급(2026-10-16 기준) |
+|---|---|---|
+| 양찬희 | 010-1111-0001 | 관리자 |
+| 김호연 | 010-1111-0002 | 회원 |
+| 김기열 | 010-1111-0003 | 회원 |
+| 한인영 | 010-1111-0004 | 회원 |
+| 이대영 | 010-1111-0005 | 회원 |
+| 장익선 | 010-1111-0006 | 게스트 |
+| 문석환 | 010-1111-0007 | 게스트 |
+
+실제 대표: 김진호(카카오). 테스트 계정은 관리 탭에서 삭제하면 계정까지 지워짐.
+
+## DB 구조 요약 (Supabase, 모두 RLS 적용)
+- `profiles` 회원(이름·역할·상태·게스트 여부·구력·성별·생년·별 표시), `profile_private` 전화번호(본인·관리자만)
+- `meetups` 모임(종류·참가 방식·코트·정원·주최자), `participants` 참가(상태 approved/pending), `matches` 대진(회원 ID 배열·코트·점수)
+- `comments` 모임 댓글, `notices` 공지, `suggestions` 건의, `club_settings` 공개 설정(이름 표시 방식·회칙), `app_settings` 비공개(관리자·대표 코드)
+- 권한 함수: `is_admin`, `is_owner`, `is_guest`, `is_approved`, `is_host`, `can_manage`. 역할 변경 보호 트리거 `protect_role`
+- RPC: `claim_admin`, `claim_owner`, `transfer_owner`, `resign_admin`, `delete_member`, `set_admin_code`, `set_owner_code`, `name_available`, `phone_taken`, `sync_guest_credentials`
+
+## 남은 일 / 메모
+- Allow manual linking 스위치 확인 후 "카카오 계정 연결" 실제 테스트
+- 실사용하며 나온 피드백 반영. 새 기능은 schema 번호 파일 추가 + index.html 수정 + push 패턴 그대로
