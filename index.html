@@ -126,6 +126,8 @@
   .mcard .mgrid b{font-size:15px;font-weight:700}
   .mcard .mfoot{padding:10px 14px;border-top:1px solid var(--line);font-size:13px;color:var(--muted);background:var(--card)}
   .member .nm{cursor:pointer}
+  .shareMini{display:inline-flex;align-items:center;gap:4px;background:#FEE500;color:#191919;border:none;border-radius:999px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer;flex:none;min-height:30px}
+  .shareMini svg{width:14px;height:14px;fill:#191919}
   .adminBadge{font-size:11px;background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 7px;margin-left:4px;vertical-align:middle;font-weight:700}
   /* home */
   .hero{background:linear-gradient(135deg,#c8161f 0%,#8e0f16 100%);color:#fff;border-radius:20px;padding:18px 18px 16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(142,15,22,.25);position:relative;overflow:hidden}
@@ -335,9 +337,8 @@
   <section id="viewDetail" class="hidden">
     <button class="back" onclick="showView(state.prevView)"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>뒤로</button>
     <div class="card" id="detailInfo"></div>
-    <button class="kakao" id="shareBtn" style="margin:-4px 0 12px" onclick="shareMeetup()"><svg viewBox="0 0 24 24"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.7 6.7L5.6 21.5c-.1.3.2.5.5.3l4.6-3.1c.4 0 .8.1 1.3.1 5.5 0 10-3.6 10-8S17.5 3 12 3z"/></svg>카톡으로 공유</button>
     <div class="card">
-      <div class="row"><strong>참가자 <span id="pCount" class="muted"></span></strong><span class="muted" style="font-size:12px"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--accent);vertical-align:-1px"></span> 주최자</span></div>
+      <div class="row"><div><strong>참가자 <span id="pCount" class="muted"></span></strong><span class="muted" style="font-size:12px;margin-left:6px;font-weight:400"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--accent);vertical-align:-1px"></span> 주최자</span></div><button class="shareMini" id="shareBtn" onclick="shareMeetup()" title="카톡으로 공유"><svg viewBox="0 0 24 24"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.7 6.7L5.6 21.5c-.1.3.2.5.5.3l4.6-3.1c.4 0 .8.1 1.3.1 5.5 0 10-3.6 10-8S17.5 3 12 3z"/></svg>공유</button></div>
       <div class="people" id="people"></div>
       <div id="pendingBox" class="hidden" style="margin:-4px 0 12px;padding:10px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px">
         <div style="font-size:13px;font-weight:700;color:#92400e">신청 대기 <span id="pendCount"></span></div>
@@ -1772,7 +1773,12 @@ Promise.all([initAuth(), loadSettings()]).then(() => {
   // 카톡 공유 링크(?m=모임id)로 들어왔거나, 카카오 로그인 전에 보던 모임이 있으면 그 모임 열기
   const deep = new URLSearchParams(location.search).get('m') || sessionStorage.getItem('returnMeetup');
   sessionStorage.removeItem('returnMeetup');
-  if (deep && /^[0-9a-f-]{36}$/i.test(deep)) openDetail(deep);
+  if (deep && /^[0-9a-f-]{36}$/i.test(deep)){
+    db.from('meetups').select('id').eq('id', deep).maybeSingle().then(({ data }) => {
+      if (data) openDetail(deep); else toast('삭제됐거나 없는 모임이에요');
+      history.replaceState(history.state, '', location.pathname);   // 주소창의 ?m= 정리
+    });
+  }
 });
 </script>
 </body>
