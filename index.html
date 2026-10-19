@@ -164,7 +164,7 @@
   .cal .day.other{opacity:.3}
   .cal .day .n{font-size:13px;font-weight:600;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%}
   .cal .day.today .n{background:var(--accent);color:#fff}
-  .cal .day.reg{border-color:var(--regular);background:var(--regular-soft)}
+  .cal .day.reg{border:2px solid var(--regular)}
   .cal .day.selected{background:#fff;border-color:var(--accent);box-shadow:var(--shadow)}
   .cal .day .n.sun{color:#dc2626} .cal .day.today .n.sun{color:#fff}
   .cal .day .n.sat{color:var(--regular)} .cal .day.today .n.sat{color:#fff}
@@ -702,6 +702,10 @@ function showError(e){
   } else toast('오류: ' + msg);
 }
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+// onclick="..." 안에 사용자 문자열을 인자로 넣을 때 사용 (따옴표·역슬래시까지 안전하게)
+const jsq = v => esc(JSON.stringify(String(v ?? '')));
+// 모임 종류는 정해진 두 값만 class 로 사용
+const kc = k => k === 'regular' ? 'regular' : 'flash';
 function fmtDate(s){ const [y,m,d]=s.split('-'); const dt=new Date(+y,m-1,+d); return `${+m}월 ${+d}일 (${DOW[dt.getDay()]})`; }
 function fmtTime(t){ return t ? t.slice(0,5) : ''; }
 function dday(s){ const d = Math.round((new Date(s+'T00:00') - new Date(todayStr+'T00:00'))/86400000); return d===0 ? '오늘' : d>0 ? `D-${d}` : `${-d}일 전`; }
@@ -1003,7 +1007,7 @@ async function loadAdmin(){
   $('pendingCount').textContent = pend.length ? `${pend.length}명` : '';
   $('ownerSettings').classList.toggle('hidden', !isOwner());
   $('pending').innerHTML = pend.map(p => memberRow(p,
-      sb('승인', `setStatus('${p.id}','approved')`, 'primary') + sb('삭제', `deleteMember('${p.id}','${esc(p.name)}')`)
+      sb('승인', `setStatus('${p.id}','approved')`, 'primary') + sb('삭제', `deleteMember('${p.id}',${jsq(p.name)})`)
     )).join('') || '<div class="empty">승인 대기 중인 가입이 없어요</div>';
   $('memberCount').textContent = `${rest.length}명`;
   $('members').innerHTML = rest.map(p => {
@@ -1060,7 +1064,7 @@ function goToday(){ const t=new Date(); state.year=t.getFullYear(); state.month=
 
 function renderCalendar(){
   $('monthLabel').textContent = `${state.year}년 ${state.month+1}월`;
-  $('legend').innerHTML = `<span><i style="background:var(--regular)"></i>${KINDS.regular} <span style="display:inline-block;width:14px;height:12px;border:1.5px solid var(--regular);border-radius:4px;vertical-align:-2px;background:var(--regular-soft)"></span></span><span><i style="background:var(--flash)"></i>${KINDS.flash}</span>`;
+  $('legend').innerHTML = `<span><i style="background:var(--regular)"></i>${KINDS.regular} <span style="display:inline-block;width:14px;height:12px;border:2px solid var(--regular);border-radius:4px;vertical-align:-2px"></span></span><span><i style="background:var(--flash)"></i>${KINDS.flash}</span>`;
   const grid = $('calGrid'); grid.innerHTML = '';
   DOW.forEach(d => { const e=document.createElement('div'); e.className='dow'; e.textContent=d; grid.appendChild(e); });
   const first = new Date(state.year, state.month, 1);
@@ -1078,7 +1082,7 @@ function renderCalendar(){
     const dayMs = state.meetups.filter(m=>m.date===s);
     if (dayMs.some(m=>m.kind==='regular')) cell.classList.add('reg');
     dayMs.slice(0,3).forEach(m=>{
-      const t=document.createElement('div'); t.className='tag '+m.kind; t.textContent=m.title; cell.appendChild(t);
+      const t=document.createElement('div'); t.className='tag '+kc(m.kind); t.textContent=m.title; cell.appendChild(t);
     });
     cell.onclick = () => {
       state.selected = s;
@@ -1096,7 +1100,7 @@ function renderDayList(){
   if (!list.length){ box.innerHTML = '<div class="empty">이 날은 모임이 없어요</div>'; return; }
   box.innerHTML = list.map(m => `
     <div class="item" onclick="openDetail('${m.id}')">
-      <div class="title"><span class="badge ${m.kind}">${KINDS[m.kind]||''}</span>${esc(m.title)}</div>
+      <div class="title"><span class="badge ${kc(m.kind)}">${KINDS[m.kind]||''}</span>${esc(m.title)}</div>
       <div class="muted">${fmtTime(m.start_time)} · ${esc(m.location||'장소 미정')} · ${cnt(apCount(m), m.capacity)}</div>
     </div>`).join('');
 }
@@ -1199,7 +1203,7 @@ function renderUpcoming(){
     const joined = !!me && me.status !== 'pending';
     return `<div class="up" onclick="openDetail('${m.id}')">
       <div class="d"><b>${+d}</b><small>${+mo}월 ${dow}</small></div>
-      <div class="t"><div class="title"><span class="badge ${m.kind}">${KINDS[m.kind]||''}</span>${esc(m.title)}</div>
+      <div class="t"><div class="title"><span class="badge ${kc(m.kind)}">${KINDS[m.kind]||''}</span>${esc(m.title)}</div>
         <div class="muted">${fmtTime(m.start_time)} · ${esc(m.location||'장소 미정')} · ${cnt(apCount(m), m.capacity)}</div></div>
       ${joined?'<span class="joined">참가중</span>':(me?'<span class="joined" style="background:#fef3c7;color:#92400e">신청 중</span>':'')}
     </div>`; }).join('') : `<div class="empty"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><div>${f==='all' ? '앞으로 2주 안에 예정된 모임이 없어요' : `2주 안에 예정된 ${KIND[f]}이 없어요`}</div></div>`;
@@ -1342,15 +1346,15 @@ async function openMember(uid){
 function memberAdminMenu(u){
   if (!isAdmin() || u.id === myId() || u.role === 'owner') return '';
   const b = [];
-  const n = esc(u.name);
+  const n = jsq(u.name);
   if (u.role === 'member') b.push(sb(u.is_guest ? '회원으로' : '게스트로', `memberAct('setGuest','${u.id}',${u.is_guest ? 'false' : 'true'})`));
   if (isOwner()){
-    if (u.role === 'admin') b.push(sb('관리자 해제', `memberAct('setRole','${u.id}','member')`), sb('대표 넘기기', `memberAct('transferOwner','${u.id}','${n}')`));
+    if (u.role === 'admin') b.push(sb('관리자 해제', `memberAct('setRole','${u.id}','member')`), sb('대표 넘기기', `memberAct('transferOwner','${u.id}',${n})`));
     else if (!u.is_guest) b.push(sb('관리자 지정', `memberAct('setRole','${u.id}','admin')`));
   }
   if (u.role !== 'admin' || isOwner()){
     b.push(sb(u.status === 'blocked' ? '휴식 해제' : '휴식', `memberAct('setStatus','${u.id}','${u.status === 'blocked' ? 'approved' : 'blocked'}')`));
-    b.push(sb('삭제', `memberAct('deleteMember','${u.id}','${n}')`, 'danger'));
+    b.push(sb('삭제', `memberAct('deleteMember','${u.id}',${n})`, 'danger'));
   }
   if (!b.length) return '';
   return `<div style="margin-top:14px"><div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px">관리</div><div style="display:flex;gap:6px;flex-wrap:wrap">${b.join('')}</div></div>`;
@@ -1495,7 +1499,7 @@ async function loadHome(){
   $('recent').classList.toggle('hidden', !ro); $('recentFold').classList.toggle('open', ro);
   $('recent').innerHTML = pasts.length ? pasts.map(m => `
     <div class="item" onclick="openDetail('${m.id}')">
-      <div class="title"><span class="badge ${m.kind}">${KINDS[m.kind]||''}</span>${esc(m.title)}</div>
+      <div class="title"><span class="badge ${kc(m.kind)}">${KINDS[m.kind]||''}</span>${esc(m.title)}</div>
       <div class="muted">${fmtDate(m.date)} · ${esc(m.location||'')} · ${apCount(m)}명 참가</div>
     </div>`).join('') : '<div class="empty">아직 지난 모임이 없어요</div>';
   renderRules();
@@ -1532,7 +1536,7 @@ async function openDetail(id, pop){
 function renderDetail(){
   const m = state.current;
   $('detailInfo').innerHTML = `
-    <div class="dhead"><div><span class="badge ${m.kind}">${KINDS[m.kind]||''}</span><div class="dtitle">${esc(m.title)}</div></div><span class="dday">${dday(m.date)}</span></div>
+    <div class="dhead"><div><span class="badge ${kc(m.kind)}">${KINDS[m.kind]||''}</span><div class="dtitle">${esc(m.title)}</div></div><span class="dday">${dday(m.date)}</span></div>
     <div class="info">
       <div><span>일시</span><b>${fmtDate(m.date)} ${fmtTime(m.start_time)}</b></div>
       <div><span>장소</span><b>${esc(m.location||'미정')}</b></div>
@@ -1545,7 +1549,7 @@ function renderDetail(){
   const manage = canManage(m);
   $('pCount').textContent = m.capacity ? `${names.length}/${m.capacity}` : `${names.length}`;
   $('people').innerHTML = m.participants.length
-    ? m.participants.map(p=>`<span class="person ${p.user_id===m.created_by_id?'host':(p.user_id===myId()?'me':'')}" onclick="openMember('${p.user_id}')">${esc(fmtName(p))}${p.profiles?.is_guest ? '<span class="g">게스트</span>' : ''}${manage && p.user_id!==myId() ? `<span class="x" title="참가 취소시키기" onclick="event.stopPropagation();removeParticipant('${p.id}','${esc(p.profiles?.name || p.name)}')">&times;</span>` : ''}</span>`).join('')
+    ? m.participants.map(p=>`<span class="person ${p.user_id===m.created_by_id?'host':(p.user_id===myId()?'me':'')}" onclick="openMember('${p.user_id}')">${esc(fmtName(p))}${p.profiles?.is_guest ? '<span class="g">게스트</span>' : ''}${manage && p.user_id!==myId() ? `<span class="x" title="참가 취소시키기" onclick="event.stopPropagation();removeParticipant('${p.id}',${jsq(p.profiles?.name || p.name)})">&times;</span>` : ''}</span>`).join('')
     : '<span class="muted">아직 없음</span>';
   // 신청 대기 목록
   const pend = m.pending || [];
@@ -1554,7 +1558,7 @@ function renderDetail(){
   $('pendingList').innerHTML = pend.map(p => `
     <div class="row" style="padding:4px 0">
       <span style="font-size:14px;font-weight:600">${esc(fmtName(p))}${p.profiles?.is_guest ? '<span class="g" style="margin-left:5px;font-size:10px;font-weight:700;padding:1px 5px;border-radius:5px;background:#e0f2fe;color:#075985">게스트</span>' : ''}${p.user_id===myId()?' <span class="muted">(나)</span>':''}</span>
-      ${manage && p.user_id !== myId() ? `<span style="display:flex;gap:4px">${sb('승인', `approveParticipant('${p.id}')`, 'primary')}${sb('거절', `removeParticipant('${p.id}','${esc(p.profiles?.name || p.name)}')`)}</span>` : (p.user_id === myId() ? '<span class="muted">주최자 승인 대기</span>' : '')}
+      ${manage && p.user_id !== myId() ? `<span style="display:flex;gap:4px">${sb('승인', `approveParticipant('${p.id}')`, 'primary')}${sb('거절', `removeParticipant('${p.id}',${jsq(p.profiles?.name || p.name)})`)}</span>` : (p.user_id === myId() ? '<span class="muted">주최자 승인 대기</span>' : '')}
     </div>`).join('');
   const mineP = m.participants.find(p=>p.user_id===myId()) || pend.find(p=>p.user_id===myId());
   const joined = !!mineP && mineP.status !== 'pending';
