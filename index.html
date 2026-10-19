@@ -334,6 +334,7 @@
   <section id="viewDetail" class="hidden">
     <button class="back" onclick="showView(state.prevView)"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>뒤로</button>
     <div class="card" id="detailInfo"></div>
+    <button class="kakao" id="shareBtn" style="margin:-4px 0 12px" onclick="shareMeetup()"><svg viewBox="0 0 24 24"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.7 6.7L5.6 21.5c-.1.3.2.5.5.3l4.6-3.1c.4 0 .8.1 1.3.1 5.5 0 10-3.6 10-8S17.5 3 12 3z"/></svg>카톡으로 공유</button>
     <div class="card">
       <div class="row"><strong>참가자 <span id="pCount" class="muted"></span></strong><span class="muted" style="font-size:12px"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--accent);vertical-align:-1px"></span> 주최자</span></div>
       <div class="people" id="people"></div>
@@ -612,11 +613,13 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js" crossorigin="anonymous"></script>
 <script>
 // ===== 설정 =====
 const CLUB_NAME    = 'BY 테니스 클럽';
 const SUPABASE_URL = 'https://wzjoiitmujirjtliwwjg.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_aopxcBhoftCxz9Q73zX9og_XKtwDJ-3';
+const KAKAO_JS_KEY = '';   // 카카오 개발자 콘솔 > 앱 > 플랫폼 키 > JavaScript 키. 비워 두면 폰 기본 공유창·링크 복사로 대신 동작
 // ===============
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -813,6 +816,7 @@ function requireLogin(next){
 }
 function closeLogin(){ $('loginModal').classList.remove('open'); afterLogin = null; }
 async function loginKakao(){
+  if (state.current) sessionStorage.setItem('returnMeetup', state.current.id);
   const { error } = await db.auth.signInWithOAuth({ provider: 'kakao', options: { redirectTo: location.origin + location.pathname, scopes: 'profile_nickname profile_image' } });
   if (error) showError(error);
 }
@@ -1263,6 +1267,48 @@ async function saveRules(){
   if (error) return showError(error);
   state.rules = v; toast('회칙을 저장했습니다');
 }
+// ===== 카톡 공유 =====
+const SITE_URL = location.origin + location.pathname;
+function meetupLink(id){ return `${SITE_URL}?m=${id}`; }
+function shareText(m){
+  const n = m.participants.length;
+  return `[${CLUB_NAME}] ${m.title}\n${fmtDate(m.date)} ${fmtTime(m.start_time)} · ${m.location || '장소 미정'}\n참가 ${m.capacity ? `${n}/${m.capacity}명` : `${n}명`}`;
+}
+function kakaoReady(){
+  try {
+    if (!KAKAO_JS_KEY || !window.Kakao) return false;
+    if (!Kakao.isInitialized()) Kakao.init(KAKAO_JS_KEY);
+    return !!(Kakao.Share && Kakao.Share.sendDefault);
+  } catch (e) { console.warn('kakao init', e); return false; }
+}
+async function shareMeetup(){
+  const m = state.current; if (!m) return;
+  const url = meetupLink(m.id);
+  const n = m.participants.length;
+  if (kakaoReady()){
+    try {
+      Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: `${KINDS[m.kind] ? '[' + KINDS[m.kind] + '] ' : ''}${m.title}`,
+          description: `${fmtDate(m.date)} ${fmtTime(m.start_time)} · ${m.location || '장소 미정'}\n참가 ${m.capacity ? `${n}/${m.capacity}명` : `${n}명`}`,
+          imageUrl: `${SITE_URL}logo.png`,
+          link: { mobileWebUrl: url, webUrl: url }
+        },
+        buttons: [{ title: m.join_mode === 'approve' ? '참가 신청하기' : '참가하기', link: { mobileWebUrl: url, webUrl: url } }]
+      });
+      return;
+    } catch (e) { console.warn('kakao share', e); }
+  }
+  const text = shareText(m);
+  if (navigator.share){
+    try { await navigator.share({ title: m.title, text, url }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(`${text}\n참가 신청: ${url}`); toast('모임 안내와 링크를 복사했어요. 단톡방에 붙여 넣으세요'); }
+  catch { prompt('아래 내용을 복사해 단톡방에 붙여 넣으세요', `${text}\n참가 신청: ${url}`); }
+}
+
 // ===== 회원 정보 =====
 function closeMember(){ $('memberModal').classList.remove('open'); }
 async function openMember(uid){
@@ -1716,7 +1762,13 @@ function renderStandings(){
 }
 
 // ===== 시작 =====
-Promise.all([initAuth(), loadSettings()]).then(() => { const v = localStorage.getItem('startView') || 'home'; history.replaceState({ view: v }, ''); showView(v, { pop: true }); });
+Promise.all([initAuth(), loadSettings()]).then(() => {
+  const v = localStorage.getItem('startView') || 'home'; history.replaceState({ view: v }, ''); showView(v, { pop: true });
+  // 카톡 공유 링크(?m=모임id)로 들어왔거나, 카카오 로그인 전에 보던 모임이 있으면 그 모임 열기
+  const deep = new URLSearchParams(location.search).get('m') || sessionStorage.getItem('returnMeetup');
+  sessionStorage.removeItem('returnMeetup');
+  if (deep && /^[0-9a-f-]{36}$/i.test(deep)) openDetail(deep);
+});
 </script>
 </body>
 </html>
