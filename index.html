@@ -164,12 +164,12 @@
   .cal .day.other{opacity:.3}
   .cal .day .n{font-size:13px;font-weight:600;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%}
   .cal .day.today .n{background:var(--accent);color:#fff}
-  .cal .day.reg{border:2px solid var(--regular)}
   .cal .day.selected{background:#fff;border-color:var(--accent);box-shadow:var(--shadow)}
   .cal .day .n.sun{color:#dc2626} .cal .day.today .n.sun{color:#fff}
   .cal .day .n.sat{color:var(--regular)} .cal .day.today .n.sat{color:#fff}
   .cal .tag{width:100%;font-size:10px;font-weight:600;border-radius:4px;padding:1px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
   .tag.regular{background:var(--regular-soft);color:var(--regular)} .tag.flash{background:var(--flash-soft);color:#b45309}
+  .cal .tag.regular{border:1.5px solid var(--regular);font-weight:700;padding:0 3px}   /* 정기 모임 칩: 진한 테두리 */
   .legend{display:flex;gap:10px;align-items:center}
   .legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
   .item{padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
@@ -253,6 +253,7 @@
     .cal .day{min-height:54px;padding:4px 2px;gap:3px}
     .cal .tag{font-size:0;height:5px;padding:0;border-radius:3px;background:var(--regular)}
     .cal .tag.flash{background:var(--flash)}
+    .cal .tag.regular{height:7px;background:var(--regular-soft);border:1.5px solid var(--regular);padding:0}
     .match{gap:6px;padding:8px}
     input,select,textarea{font-size:16px}   /* iOS 자동 확대 방지 */
   }
@@ -1064,7 +1065,7 @@ function goToday(){ const t=new Date(); state.year=t.getFullYear(); state.month=
 
 function renderCalendar(){
   $('monthLabel').textContent = `${state.year}년 ${state.month+1}월`;
-  $('legend').innerHTML = `<span><i style="background:var(--regular)"></i>${KINDS.regular} <span style="display:inline-block;width:14px;height:12px;border:2px solid var(--regular);border-radius:4px;vertical-align:-2px"></span></span><span><i style="background:var(--flash)"></i>${KINDS.flash}</span>`;
+  $('legend').innerHTML = `<span><i style="background:var(--regular)"></i>${KINDS.regular} <span style="display:inline-block;width:16px;height:9px;border:1.5px solid var(--regular);background:var(--regular-soft);border-radius:3px;vertical-align:0"></span></span><span><i style="background:var(--flash)"></i>${KINDS.flash}</span>`;
   const grid = $('calGrid'); grid.innerHTML = '';
   DOW.forEach(d => { const e=document.createElement('div'); e.className='dow'; e.textContent=d; grid.appendChild(e); });
   const first = new Date(state.year, state.month, 1);
