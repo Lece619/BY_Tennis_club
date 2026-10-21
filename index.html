@@ -140,6 +140,7 @@
   .hero .sub{font-size:13px;opacity:.9;margin-top:2px}
   .hero .cnt{display:inline-block;margin-top:8px;font-size:12px;font-weight:700;background:#fff;color:var(--accent-ink);border-radius:999px;padding:3px 10px}
   .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+  .tiles.two{grid-template-columns:repeat(2,1fr)}
   .tile{background:var(--card);border-radius:14px;padding:12px 8px;text-align:center;box-shadow:var(--shadow)}
   .tile b{display:block;font-size:24px;font-weight:800;color:var(--text);letter-spacing:-.03em;line-height:1.2}
   .tile span{font-size:12px;color:var(--muted);font-weight:500}
@@ -174,6 +175,9 @@
   .cal .tag.regular{border:1.5px solid var(--regular);font-weight:700;padding:0 3px}   /* 정기 모임 칩: 진한 테두리 */
   .legend{display:flex;gap:10px;align-items:center}
   .legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+  .legend .sw{width:16px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .legend .sw.regular{background:var(--regular-soft);border:1.5px solid var(--regular)}
+  .legend .sw.flash{background:var(--flash-soft);border:1.5px solid #f6c48a}
   .item{padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
   .item:first-of-type{border-top:none;padding-top:6px}
   .item .title{font-weight:700;font-size:15px}
@@ -273,6 +277,7 @@
     main{padding-left:12px;padding-right:12px}
     .card{padding:14px}
     .fold{margin:-14px;padding:14px}
+    #fmtSeg{flex-wrap:wrap} #fmtSeg button{flex:1 1 auto;white-space:nowrap}   /* 이름 표시 방식: 글자 중간에서 줄바꿈 안 되게 */
     .match.edit{grid-template-columns:1fr}   /* 대진 편집: 팀별로 한 줄씩 넓게 */
     .match.edit .team{flex-direction:row}
     .match.edit .team select{flex:1;min-width:0}
@@ -281,6 +286,7 @@
     .cal .day{min-height:54px;padding:4px 2px;gap:3px}
     .cal .tag{font-size:0;height:5px;padding:0;border-radius:3px;background:var(--regular)}
     .cal .tag.flash{background:var(--flash)}
+    .legend .sw.flash{background:var(--flash);border-color:var(--flash)}
     .cal .tag.regular{height:7px;background:var(--regular-soft);border:1.5px solid var(--regular);padding:0}
     .match{gap:6px;padding:8px}
     input,select,textarea{font-size:16px}   /* iOS 자동 확대 방지 */
@@ -309,7 +315,7 @@
     <div class="notice hidden" id="profileNotice" onclick="openProfile()"><span>프로필을 완성해 주세요 (전화번호·구력·성별·생년)</span><span>›</span></div>
     <div class="tiles" id="tiles"></div>
     <div class="card">
-      <div class="row"><strong>다가오는 모임</strong><button class="primary" onclick="openCreate()">+ 모임 만들기</button></div>
+      <div class="row"><strong>다가오는 모임</strong><button class="primary createBtn" onclick="openCreate()">+ 모임 만들기</button></div>
       <div class="seg" id="upFilter" style="margin-top:10px">
         <button data-v="all" onclick="setUpFilter('all')">전체</button>
         <button data-v="regular" onclick="setUpFilter('regular')">정기</button>
@@ -360,7 +366,7 @@
     <div class="card">
       <div class="row">
         <strong id="dayLabel"></strong>
-        <button class="primary" onclick="openCreate()">+ 모임 만들기</button>
+        <button class="primary createBtn" onclick="openCreate()">+ 모임 만들기</button>
       </div>
       <div id="dayList"></div>
     </div>
@@ -437,7 +443,7 @@
     <div class="card">
       <strong>설정</strong>
 
-      <div style="margin-top:10px;padding:12px;background:var(--soft);border-radius:12px">
+      <div style="margin-top:10px;padding:12px;background:var(--soft);border:1px solid #d1d5db;border-radius:12px">
         <div style="font-size:14px;font-weight:600">이름 표시 방식 <span class="muted" style="font-weight:400">(모든 회원 화면에 적용)</span></div>
         <div class="seg" id="fmtSeg" style="margin-top:8px;display:flex">
           <button data-v="name" onclick="setDisplayFormat('name')">닉네임</button>
@@ -447,22 +453,22 @@
         <div class="muted" style="margin-top:6px">예: <span id="fmtExample"></span></div>
         <div class="muted" style="margin-top:4px">모임 상세의 참가자 명단, 대진표, 결과 표에 적용됩니다. 다른 회원 화면에는 다음에 모임을 열 때 반영됩니다.</div>
       </div>
-      <div style="margin-top:12px;padding:12px;background:var(--soft);border-radius:12px">
+      <div style="margin-top:12px;padding:12px;background:var(--soft);border:1px solid #d1d5db;border-radius:12px">
         <div style="font-size:14px;font-weight:600">회비 안내 · 입금 계좌</div>
         <div class="muted">홈의 "회비" 카드에 보입니다. 안내 글은 누구나, 입금 계좌는 승인된 회원만 볼 수 있고 누르면 복사됩니다.</div>
         <textarea id="fDues" style="min-height:90px;margin-top:8px;font-size:14px" placeholder="예: 월 회비 30,000원, 매월 10일까지 입금"></textarea>
         <div class="two" style="margin-top:8px"><input id="fBank" placeholder="은행 (예: 카카오뱅크)" autocomplete="off"><input id="fHolder" placeholder="예금주" autocomplete="off"></div>
         <input id="fAcctNo" placeholder="계좌번호 (예: 3333-01-1234567)" autocomplete="off" style="margin-top:8px">
-        <button class="ghost" style="margin-top:8px" onclick="saveDues()">회비 안내 저장</button>
+        <div style="display:flex;gap:8px;margin-top:8px"><button class="ghost" onclick="saveDues()">회비 안내 저장</button><button class="danger" onclick="deleteDues()">삭제</button></div>
       </div>
       <div id="ownerSettings">
-        <div style="margin-top:12px;padding:12px;background:var(--soft);border-radius:12px">
+        <div style="margin-top:12px;padding:12px;background:var(--soft);border:1px solid #d1d5db;border-radius:12px">
           <div style="font-size:14px;font-weight:600">회칙 수정 <span class="muted" style="font-weight:400">(대표만)</span></div>
           <div class="muted">줄 앞에 "제n장"은 제목, "• "는 조항, "◦ "와 "▪ "는 하위 항목으로 표시됩니다. 저장하면 모든 회원 화면에 바로 반영됩니다.</div>
           <textarea id="fRules" style="min-height:220px;margin-top:8px;font-size:13px"></textarea>
           <button class="ghost" style="margin-top:8px" onclick="saveRules()">회칙 저장</button>
         </div>
-        <div style="margin-top:12px;padding:12px;background:var(--soft);border-radius:12px">
+        <div style="margin-top:12px;padding:12px;background:var(--soft);border:1px solid #d1d5db;border-radius:12px">
           <div style="font-size:14px;font-weight:600">관리자 코드 변경 <span class="muted" style="font-weight:400">(대표만)</span></div>
           <div class="muted">관리자로 올리고 싶은 회원에게 이 코드를 알려 주면, 그 회원이 내 정보 → 관리자 인증에 입력해 관리자가 됩니다. 회원 목록의 "관리자 지정" 버튼으로 직접 올려도 됩니다. 6자 이상.</div>
           <div style="display:flex;gap:8px;margin-top:8px">
@@ -470,7 +476,7 @@
             <button class="ghost" style="white-space:nowrap" onclick="changeAdminCode()">변경</button>
           </div>
         </div>
-        <div style="margin-top:12px;padding:12px;background:var(--soft);border-radius:12px">
+        <div style="margin-top:12px;padding:12px;background:var(--soft);border:1px solid #d1d5db;border-radius:12px">
           <div style="font-size:14px;font-weight:600">대표 코드 변경 <span class="muted" style="font-weight:400">(대표만)</span></div>
           <div class="muted">대표 자리를 넘길 때 쓰는 비밀 코드입니다. 평소에는 회원 목록의 "대표 넘기기" 버튼을 쓰면 되고, 이 코드는 대표가 자리를 비웠을 때를 대비한 비상용입니다. 이 코드를 아는 관리자가 내 정보 → 대표 인증에 입력하면 그 사람이 대표가 되고, 기존 대표는 관리자가 됩니다. 아는 사람에게만 알려 주세요. 6자 이상.</div>
           <div style="display:flex;gap:8px;margin-top:8px">
@@ -808,9 +814,10 @@ async function setUser(u){
 function renderUser(){
   const u = state.user;
   $('navAdmin').classList.toggle('hidden', !isAdmin());
+  document.querySelectorAll('.createBtn').forEach(b => b.classList.toggle('hidden', !!(u && u.is_guest)));   // 모임 만들기는 회원부터
   $('userChip').innerHTML = u
     ? `${u.avatar_url ? `<img src="${esc(https(u.avatar_url))}" alt="">` : ''}<span>${esc(u.name)}${crown(u)}</span>`
-    : '<span>카카오 로그인</span>';
+    : '<span>로그인</span>';
 }
 function refreshView(keepScroll){
   if (state.view === 'detail' && state.current) openDetail(state.current.id, true, keepScroll);
@@ -1132,7 +1139,7 @@ function goToday(){ const t=new Date(); state.year=t.getFullYear(); state.month=
 
 function renderCalendar(){
   $('monthLabel').textContent = `${state.year}년 ${state.month+1}월`;
-  $('legend').innerHTML = `<span><i style="background:var(--regular)"></i>${KINDS.regular} <span style="display:inline-block;width:16px;height:9px;border:1.5px solid var(--regular);background:var(--regular-soft);border-radius:3px;vertical-align:0"></span></span><span><i style="background:var(--flash)"></i>${KINDS.flash}</span>`;
+  $('legend').innerHTML = `<span><i class="sw regular"></i>${KINDS.regular}</span><span><i class="sw flash"></i>${KINDS.flash}</span>`;
   const grid = $('calGrid'); grid.innerHTML = '';
   DOW.forEach(d => { const e=document.createElement('div'); e.className='dow'; e.textContent=d; grid.appendChild(e); });
   const first = new Date(state.year, state.month, 1);
@@ -1182,7 +1189,7 @@ async function openCreate(){
   $('fKind').innerHTML = kinds.map(k => `<option value="${k}">${KIND[k]}</option>`).join('');
   $('kindHint').textContent = isAdmin() ? '' : `${KIND.regular}은 관리자만 만들 수 있어요.`;
   resetCreateForm();
-  $('fDate').value = state.selected; setCap('none'); setJoinMode('auto'); $('createModal').classList.add('open'); $('fTitle').focus();
+  $('fDate').value = state.view === 'calendar' ? state.selected : todayStr; setCap('none'); setJoinMode('auto'); $('createModal').classList.add('open'); $('fTitle').focus();
 }
 // 만들기 창을 새 모임 상태로 (수정하다 닫은 값이 남지 않게)
 function resetCreateForm(){
@@ -1228,6 +1235,7 @@ async function submitCreate(){
   if (!row.location) return toast('장소를 입력하세요');
   if (document.querySelector('#capSeg button.active')?.dataset.v === 'limit' && !(row.capacity >= 2)) return toast('모집 인원을 2명 이상으로 입력하세요');
   if (row.kind === 'regular' && !isAdmin()) return toast(`${KIND.regular}은 관리자만 만들 수 있어요`);
+  if (!state.editId && row.date < todayStr && !confirm(`${fmtDate(row.date)}은 지난 날짜예요. 그대로 만들까요?`)) return;
   if (state.editId){
     const id = state.editId;
     delete row.created_by; delete row.created_by_id;
@@ -1355,6 +1363,14 @@ async function saveDues(){
   const { error } = await db.from('club_settings').upsert([{ key: 'dues', value: text }, { key: 'dues_account', value: a.number ? JSON.stringify(a) : '' }]);
   if (error) return showError(error);
   dues = { text, acct: a.number ? a : null }; toast('회비 안내를 저장했습니다');
+}
+async function deleteDues(){
+  if (!isAdmin()) return toast('관리자만 수정할 수 있어요');
+  if (!confirm('회비 안내 글과 입금 계좌를 모두 지울까요?\n홈의 회비 카드가 사라집니다.')) return;
+  const { error } = await db.from('club_settings').delete().in('key', ['dues', 'dues_account']);
+  if (error) return showError(error);
+  ['fDues','fBank','fAcctNo','fHolder'].forEach(id => $(id).value = '');
+  dues = { text: '', acct: null }; toast('회비 안내를 삭제했습니다');
 }
 function toggleRules(){
   const open = $('rulesBody').classList.contains('hidden');
@@ -1620,11 +1636,12 @@ async function loadHome(){
         <div class="sub">${fmtDate(next.date)} ${fmtTime(next.start_time)} · ${esc(next.location||'장소 미정')}</div>
         <span class="cnt">${cnt(apCount(next), next.capacity)} 참가${next.participants.some(p=>p.user_id===myId() && p.status!=='pending')?' · 참가중':next.participants.some(p=>p.user_id===myId())?' · 신청 중':''}</span>
       </div>`
-    : `<div class="next empty"><div class="ttl">예정된 모임이 없어요</div><div class="sub">모임을 만들어 사람들을 모아 보세요</div></div>`);
+    : `<div class="next empty"><div class="ttl">예정된 모임이 없어요</div><div class="sub">${state.user && state.user.is_guest ? '새 모임이 생기면 여기에 보여요' : '모임을 만들어 사람들을 모아 보세요'}</div></div>`);
+  $('tiles').classList.toggle('two', !state.user);
   $('tiles').innerHTML = `
     <div class="tile"><b>${month.count ?? 0}</b><span>이번 달 모임</span></div>
     <div class="tile"><b>${ups.length}</b><span>2주 내 모임</span></div>
-    <div class="tile"><b>${mine.length}</b><span>내 참가 예정</span></div>`;
+    ${state.user ? `<div class="tile"><b>${mine.length}</b><span>내 참가 예정</span></div>` : ''}`;
   state.ups = ups; renderUpcoming();
   const pasts = past.data || [];
   $('recentCount').textContent = pasts.length ? `최근 ${pasts.length}개` : '';
@@ -1713,10 +1730,11 @@ function renderDetail(){
   const mineP = m.participants.find(p=>p.user_id===myId()) || pend.find(p=>p.user_id===myId());
   const joined = !!mineP && mineP.status !== 'pending';
   const full = !mineP && !!m.capacity && names.length >= m.capacity;
+  const past = m.date < todayStr;   // 지난 모임은 참가·취소 불가 (기록 보존)
   const needsRequest = !isHost(m) && (m.join_mode === 'approve' || (state.user && state.user.is_guest));
-  $('joinBtn').textContent = mineP ? (joined ? '참가 취소' : '신청 취소') : full ? '정원 마감' : (needsRequest ? '참가 신청' : '참가');
-  $('joinBtn').className = mineP ? 'ghost' : 'primary';
-  $('joinBtn').disabled = full;
+  $('joinBtn').textContent = past ? (joined ? '참가한 지난 모임' : '지난 모임') : mineP ? (joined ? '참가 취소' : '신청 취소') : full ? '정원 마감' : (needsRequest ? '참가 신청' : '참가');
+  $('joinBtn').className = mineP || past ? 'ghost' : 'primary';
+  $('joinBtn').disabled = full || past;
   $('deleteBtn').classList.toggle('hidden', !canDelete(m));
   $('editBtn').classList.toggle('hidden', !manage);
   $('genBtn').classList.toggle('hidden', !manage);
@@ -1734,6 +1752,7 @@ function renderDetail(){
 async function toggleJoin(){
   if(!requireLogin(toggleJoin)) return;
   const m = state.current;
+  if (m.date < todayStr) return toast('지난 모임은 참가하거나 취소할 수 없어요');
   const mine = m.participants.find(p=>p.user_id===myId()) || (m.pending||[]).find(p=>p.user_id===myId());
   if (!mine && !(await requireApproved())) return;
   const { error } = mine
