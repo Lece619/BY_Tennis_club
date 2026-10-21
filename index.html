@@ -1115,7 +1115,13 @@ async function openCreate(){
   const kinds = isAdmin() ? ['flash','regular'] : ['flash'];
   $('fKind').innerHTML = kinds.map(k => `<option value="${k}">${KIND[k]}</option>`).join('');
   $('kindHint').textContent = isAdmin() ? '' : `${KIND.regular}은 관리자만 만들 수 있어요.`;
+  resetCreateForm();
   $('fDate').value = state.selected; setCap('none'); setJoinMode('auto'); $('createModal').classList.add('open'); $('fTitle').focus();
+}
+// 만들기 창을 새 모임 상태로 (수정하다 닫은 값이 남지 않게)
+function resetCreateForm(){
+  state.editId = null; $('createTitle').textContent = '모임 만들기'; $('createSubmit').textContent = '만들기';
+  ['fTitle','fLocation','fNote','fCourts','fCapacity'].forEach(id => $(id).value = ''); $('fTime').value = '10:00';
 }
 function setJoinMode(v){
   document.querySelectorAll('#joinSeg button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
@@ -1130,7 +1136,7 @@ function setCap(v){
 }
 const capText = c => c ? `${c}명` : '제한 없음';
 const cnt = (n, c) => c ? `${n}/${c}명` : `${n}명`;
-function closeCreate(){ $('createModal').classList.remove('open'); state.editId = null; $('createTitle').textContent = '모임 만들기'; $('createSubmit').textContent = '만들기'; }
+function closeCreate(){ $('createModal').classList.remove('open'); resetCreateForm(); }
 function openEdit(){
   const m = state.current; if (!m) return;
   if (!canManage(m)) return toast(m.kind === 'regular' ? `${KIND.regular}은 관리자만 수정할 수 있어요` : `${KIND.flash}은 만든 사람만 수정할 수 있어요`);
@@ -1166,7 +1172,7 @@ async function submitCreate(){
   const { data, error } = await db.from('meetups').insert(row).select().single();
   if (error) return showError(error);
   await db.from('participants').insert({ meetup_id: data.id, user_id: myId(), name: state.user.name }); // 만든 사람 자동 참가
-  closeCreate(); $('fTitle').value=''; $('fLocation').value=''; $('fNote').value=''; $('fCourts').value=''; $('fCapacity').value='';
+  closeCreate();
   state.selected = row.date;
   const [y,m] = row.date.split('-'); state.year=+y; state.month=m-1;
   toast('모임을 만들었습니다');
@@ -1524,7 +1530,13 @@ async function loadHome(){
 async function openDetail(id, pop){
   await loadSettings();   // 다른 기기에서 바꾼 이름 표시 방식 반영
   const { data, error } = await db.from('meetups').select('*, host:profiles!meetups_created_by_profile_fk(name,experience,gender,birth_year,role,show_crown), participants(*, profiles(name,experience,gender,birth_year,role,show_crown,is_guest)), matches(*)').eq('id', id).single();
-  if (error) return showError(error);
+  if (error && error.code !== 'PGRST116') return showError(error);
+  if (!data){   // 삭제된 모임 (뒤로가기, 오래된 목록 등)
+    toast('삭제됐거나 없는 모임이에요');
+    history.replaceState({ view: state.view }, '');
+    if (state.view === 'detail') showView(state.prevView, { pop: true });
+    return;
+  }
   data.participants.sort((a,b)=>a.created_at.localeCompare(b.created_at));
   data.pending = data.participants.filter(p => p.status === 'pending');
   data.participants = data.participants.filter(p => p.status !== 'pending');
@@ -1682,7 +1694,7 @@ function renderBracket(){
     const div = document.createElement('div'); div.className='round';
     const doneCnt = ms.filter(x=>x.score_a!=null&&x.score_b!=null).length;
     div.innerHTML = `<div class="rhdr"><span>${r}라운드</span><small>${ms.length}경기 · 완료 ${doneCnt}</small></div>` + ms.map(x=>`
-      <div class="match ${x.score_a!=null&&x.score_b!=null?'done':''}">
+      <div class="match ${x.score_a!=null&&x.score_b!=null?'done':''}" data-id="${x.id}">
         <div class="team">${slot(x,'a',0,playing)}${slot(x,'a',1,playing)}</div>
         <div class="score">
           <input class="sc" type="number" min="0" value="${x.score_a??''}" ${dis} onchange="saveScore('${x.id}','score_a',this.value)">
@@ -1747,7 +1759,16 @@ async function saveScore(id, field, val){
   const { error } = await db.from('matches').update({ [field]: v }).eq('id', id);
   if (error) return showError(error);
   const mt = state.current.matches.find(x=>x.id===id); mt[field]=v;
-  renderBracket();
+  // 바뀐 경기 표시와 라운드 완료 수, 결과 표만 갱신 (입력 칸은 그대로 둠)
+  const done = x => x.score_a!=null && x.score_b!=null;
+  const el = document.querySelector(`.match[data-id="${id}"]`);
+  if (el){
+    el.classList.toggle('done', done(mt));
+    const small = el.closest('.round')?.querySelector('.rhdr small');
+    const ms = state.current.matches.filter(x=>x.round===mt.round);
+    if (small) small.textContent = `${ms.length}경기 · 완료 ${ms.filter(done).length}`;
+  }
+  renderStandings();
 }
 function renderStandings(){
   const m = state.current;
