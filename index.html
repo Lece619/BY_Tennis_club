@@ -247,10 +247,36 @@
   .hidden{display:none !important}
   .toast{position:fixed;bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 18px;border-radius:16px;font-size:14px;font-weight:600;opacity:0;transition:.2s;pointer-events:none;z-index:20;max-width:calc(100% - 32px);text-align:center}
   .toast.show{opacity:1}
+  /* 손가락 터치 영역·폰 동작 */
+  html{touch-action:manipulation}   /* 두 번 탭 확대 방지 (두 손가락 확대는 그대로) */
+  .sheet{max-height:92dvh;overscroll-behavior:contain}
+  .back{min-height:40px;padding:8px 12px 8px 0}
+  .seg button{min-height:34px}
+  .cal-head button.icon{min-width:44px;min-height:40px}
+  .fold{margin:-16px;padding:16px;border-radius:var(--r)}
+  .person .x{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;margin:-5px -9px -5px 1px;font-size:18px;border-radius:50%}
+  .match .foot select,.match .foot .linkBtn{min-height:34px}
+  .member .nm .muted{white-space:normal;word-break:keep-all}
+  .loadbar{position:fixed;left:0;right:0;top:env(safe-area-inset-top);height:3px;z-index:30;pointer-events:none;opacity:0;transition:opacity .15s;background:linear-gradient(90deg,transparent,var(--accent),transparent) no-repeat;background-size:40% 100%}
+  .loadbar.on{opacity:1;animation:lb 1s linear infinite}
+  @keyframes lb{from{background-position:-40% 0}to{background-position:140% 0}}
+  /* 회비 */
+  #acctBtn svg{transition:transform .15s} #acctBtn.open svg{transform:rotate(180deg)}
+  .acctBox{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;padding:12px 14px;border:1.5px dashed var(--accent);background:var(--accent-soft);border-radius:12px;cursor:pointer}
+  .acctBox:active{opacity:.7}
+  .acctBox .bank{font-size:13px;font-weight:700;color:var(--accent-ink)}
+  .acctBox .num{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;word-break:break-all}
+  .acctBox .copy{flex:none;background:var(--accent);color:#fff;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700}
+  @media(min-width:600px){.cal .tag{font-size:11px}}
   /* 좁은 화면(폰) */
   @media(max-width:480px){
     main{padding-left:12px;padding-right:12px}
     .card{padding:14px}
+    .fold{margin:-14px;padding:14px}
+    .match.edit{grid-template-columns:1fr}   /* 대진 편집: 팀별로 한 줄씩 넓게 */
+    .match.edit .team{flex-direction:row}
+    .match.edit .team select{flex:1;min-width:0}
+    .match.edit input.sc{width:56px;height:40px}
     .cal{gap:3px}
     .cal .day{min-height:54px;padding:4px 2px;gap:3px}
     .cal .tag{font-size:0;height:5px;padding:0;border-radius:3px;background:var(--regular)}
@@ -277,7 +303,7 @@
 
   <!-- 홈 대시보드 -->
   <section id="viewHome" class="hidden">
-    <div class="hero" id="hero"></div>
+    <div class="hero" id="hero"><div class="hello">불러오는 중…</div></div>
     <div class="strip hidden" id="noticeStrip" onclick="showView('notices')"><span class="lbl">공지</span><span class="t" id="noticeStripText"></span><span class="muted">›</span></div>
     <div class="notice hidden" id="approvalNotice"></div>
     <div class="notice hidden" id="profileNotice" onclick="openProfile()"><span>프로필을 완성해 주세요 (전화번호·구력·성별·생년)</span><span>›</span></div>
@@ -301,6 +327,13 @@
         <div class="rules" id="rulesText"></div>
         <button class="ghost" style="width:100%;margin-top:14px" onclick="openSuggest()">건의하기</button>
         <div class="muted" style="margin-top:6px;text-align:center">건의 내용은 관리자에게만 전달됩니다.</div>
+      </div>
+    </div>
+    <div class="card hidden" id="duesCard">
+      <div class="fold" id="duesFold" onclick="toggleDues()"><strong>회비</strong><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
+      <div id="duesBody" class="hidden" style="margin-top:10px">
+        <div class="rules" id="duesText"></div>
+        <div id="duesAcct"></div>
       </div>
     </div>
     <div class="card">
@@ -366,7 +399,7 @@
       <strong>댓글 <span class="muted" id="cmtCount"></span></strong>
       <div id="comments" style="margin-top:6px"></div>
       <div class="cmtForm">
-        <input id="fComment" maxlength="300" placeholder="예: 송금 완료했어요" onkeydown="if(event.key==='Enter')submitComment()">
+        <input id="fComment" maxlength="300" enterkeyhint="send" placeholder="예: 송금 완료했어요" onkeydown="if(event.key==='Enter'&&!event.isComposing&&event.keyCode!==229)submitComment()">
         <button class="primary" style="white-space:nowrap;padding:10px 14px" onclick="submitComment()">등록</button>
       </div>
     </div>
@@ -414,6 +447,14 @@
         <div class="muted" style="margin-top:6px">예: <span id="fmtExample"></span></div>
         <div class="muted" style="margin-top:4px">모임 상세의 참가자 명단, 대진표, 결과 표에 적용됩니다. 다른 회원 화면에는 다음에 모임을 열 때 반영됩니다.</div>
       </div>
+      <div style="margin-top:12px;padding:12px;background:var(--soft);border-radius:12px">
+        <div style="font-size:14px;font-weight:600">회비 안내 · 입금 계좌</div>
+        <div class="muted">홈의 "회비" 카드에 보입니다. 안내 글은 누구나, 입금 계좌는 승인된 회원만 볼 수 있고 누르면 복사됩니다.</div>
+        <textarea id="fDues" style="min-height:90px;margin-top:8px;font-size:14px" placeholder="예: 월 회비 30,000원, 매월 10일까지 입금"></textarea>
+        <div class="two" style="margin-top:8px"><input id="fBank" placeholder="은행 (예: 카카오뱅크)" autocomplete="off"><input id="fHolder" placeholder="예금주" autocomplete="off"></div>
+        <input id="fAcctNo" placeholder="계좌번호 (예: 3333-01-1234567)" autocomplete="off" style="margin-top:8px">
+        <button class="ghost" style="margin-top:8px" onclick="saveDues()">회비 안내 저장</button>
+      </div>
       <div id="ownerSettings">
         <div style="margin-top:12px;padding:12px;background:var(--soft);border-radius:12px">
           <div style="font-size:14px;font-weight:600">회칙 수정 <span class="muted" style="font-weight:400">(대표만)</span></div>
@@ -458,14 +499,14 @@
     <label>장소 <span style="color:var(--accent)">*</span></label>
     <input id="fLocation" placeholder="예: OO테니스장">
     <label>코트 수 <span class="muted" style="font-weight:400">(선택)</span></label>
-    <input id="fCourts" type="number" min="1" placeholder="미정이면 비워 두세요">
+    <input id="fCourts" type="number" inputmode="numeric" min="1" placeholder="미정이면 비워 두세요">
     <label>모집 인원</label>
     <div style="display:flex;gap:8px;align-items:center">
       <div class="seg" id="capSeg">
         <button type="button" data-v="none" onclick="setCap('none')">제한 없음</button>
         <button type="button" data-v="limit" onclick="setCap('limit')">제한</button>
       </div>
-      <input id="fCapacity" type="number" min="2" placeholder="명" style="width:90px" class="hidden">
+      <input id="fCapacity" type="number" inputmode="numeric" min="2" placeholder="명" style="width:90px" class="hidden">
     </div>
     <label>참가 방식</label>
     <div class="seg" id="joinSeg">
@@ -537,7 +578,7 @@
     <label>이름</label>
     <input id="gName" maxlength="20" placeholder="예: 홍길동" autocomplete="name">
     <label>전화번호</label>
-    <input id="gPhone" inputmode="numeric" placeholder="010-0000-0000" autocomplete="tel" maxlength="13" oninput="maskPhone(this)" onkeydown="if(event.key==='Enter')guestAuth()">
+    <input id="gPhone" inputmode="numeric" placeholder="010-0000-0000" autocomplete="tel" maxlength="13" oninput="maskPhone(this)" onkeydown="if(event.key==='Enter'&&!event.isComposing&&event.keyCode!==229)guestAuth()">
     <button class="primary" style="width:100%;margin-top:16px" onclick="guestAuth()">등록 또는 로그인</button>
   </div>
 </div>
@@ -553,7 +594,7 @@
       <div style="flex:1;min-height:56px;cursor:default;-webkit-tap-highlight-color:transparent;user-select:none" onclick="secretTap()"><div id="pName" style="font-weight:700;font-size:16px"></div><div id="pRole" class="muted"></div></div>
     </div>
     <label>닉네임</label>
-    <input id="fName" maxlength="20" placeholder="예: 홍길동" onkeydown="if(event.key==='Enter')saveProfile()">
+    <input id="fName" maxlength="20" placeholder="예: 홍길동" onkeydown="if(event.key==='Enter'&&!event.isComposing&&event.keyCode!==229)saveProfile()">
     <label>전화번호 <span class="muted" style="font-weight:400">(관리자에게만 보입니다)</span></label>
     <input id="fPhone" inputmode="numeric" placeholder="010-0000-0000" autocomplete="tel" maxlength="13" oninput="maskPhone(this)">
     <div class="muted hidden" id="phoneAcctHint">전화번호 계정은 로그인할 때 현재 닉네임과 번호를 씁니다.</div>
@@ -596,7 +637,7 @@
     <div id="claimBox" class="hidden" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
       <div class="muted" id="claimDesc">관리자에게 받은 코드를 입력하면 관리자 권한이 생깁니다.</div>
       <div style="display:flex;gap:8px;margin-top:8px">
-        <input id="fAdminCode" placeholder="관리자 코드" autocomplete="off" onkeydown="if(event.key==='Enter')claimAdmin()">
+        <input id="fAdminCode" placeholder="관리자 코드" autocomplete="off" onkeydown="if(event.key==='Enter'&&!event.isComposing&&event.keyCode!==229)claimAdmin()">
         <button class="ghost" style="white-space:nowrap" onclick="claimAdmin()">인증</button>
       </div>
     </div>
@@ -613,6 +654,7 @@
 </nav>
 
 <div class="toast" id="toast"></div>
+<div class="loadbar" id="loadbar"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js" crossorigin="anonymous"></script>
@@ -770,15 +812,33 @@ function renderUser(){
     ? `${u.avatar_url ? `<img src="${esc(https(u.avatar_url))}" alt="">` : ''}<span>${esc(u.name)}${crown(u)}</span>`
     : '<span>카카오 로그인</span>';
 }
-function refreshView(){
-  if (state.view === 'detail' && state.current) openDetail(state.current.id, true);
-  else showView(state.view, { pop: true });
+function refreshView(keepScroll){
+  if (state.view === 'detail' && state.current) openDetail(state.current.id, true, keepScroll);
+  else showView(state.view, { pop: true, keepScroll });
 }
+// 창(모달)과 뒤로가기: 창을 열면 기록을 하나 쌓아 두고, 폰 뒤로가기·Esc 는 창만 닫음
+const modalStack = []; let skipPop = 0;
+new MutationObserver(list => {
+  let closed = 0;
+  list.forEach(m => {
+    const el = m.target; if (!el.classList.contains('modal')) return;
+    const open = el.classList.contains('open'), was = /(^|\s)open(\s|$)/.test(m.oldValue || '');
+    if (open && !was){ modalStack.push(el.id); history.pushState(Object.assign({}, history.state, { modal: el.id }), ''); }
+    else if (!open && was){ const i = modalStack.lastIndexOf(el.id); if (i >= 0){ modalStack.splice(i, 1); closed++; } }
+  });
+  // 화면의 ×·취소 버튼으로 닫았으면 쌓아 둔 기록도 되돌림 (그 사이 다른 화면으로 옮겼으면 그대로 둠)
+  if (closed && history.state && history.state.modal){ skipPop++; history.go(-closed); }
+}).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || !document.querySelector('.modal.open')) return;
+  if (history.state && history.state.modal) history.back();
+  else document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
+});
 window.addEventListener('popstate', e => {
+  if (skipPop){ skipPop--; return; }
+  const top = modalStack.pop();
+  if (top){ $(top).classList.remove('open'); if (top === 'loginModal') afterLogin = null; return; }
   const st = e.state;
-  // 열려 있는 창이 있으면 뒤로가기로 창만 닫기
-  const openModal = document.querySelector('.modal.open');
-  if (openModal){ openModal.classList.remove('open'); history.pushState(st || { view: state.view }, ''); return; }
   if (!st) return showView('home', { pop: true });
   if (st.view === 'detail' && st.id) openDetail(st.id, true);
   else showView(st.view || 'home', { pop: true });
@@ -809,9 +869,14 @@ function watchApproval(){
     }
   }, 20000);
 }
+// 카톡 등 다른 앱에 갔다가 돌아오면 지금 화면을 다시 불러옴 (스크롤 위치 유지)
+let hiddenAt = 0;
 document.addEventListener('visibilitychange', async () => {
-  if (document.hidden || !state.user) return;
-  if (await refreshUser()) refreshView();
+  if (document.hidden){ hiddenAt = Date.now(); return; }
+  const changed = state.user ? await refreshUser() : false;
+  const stale = hiddenAt && Date.now() - hiddenAt > 15000;
+  const typing = document.activeElement && document.activeElement.matches('input,select,textarea');
+  if ((changed || stale) && !typing && !document.querySelector('.modal.open')) refreshView(true);
 });
 let afterLogin = null;
 function requireLogin(next){
@@ -995,6 +1060,7 @@ async function loadAdmin(){
   renderFmtSeg();
   loadSuggestions();
   await loadSettings(); $('fRules').value = state.rules || '';
+  await loadDues(); $('fDues').value = dues.text; $('fBank').value = dues.acct?.bank || ''; $('fAcctNo').value = dues.acct?.number || ''; $('fHolder').value = dues.acct?.holder || '';
   const [{ data, error }, pv, pj] = await Promise.all([
     db.from('profiles').select('*').order('created_at'),
     db.from('profile_private').select('id,phone'),
@@ -1193,7 +1259,7 @@ function showView(name, opts){
   if (name !== 'detail' && name !== 'notices') state.prevView = name;
   ['home','calendar','detail','admin','notices'].forEach(v => $('view'+v[0].toUpperCase()+v.slice(1)).classList.toggle('hidden', v!==name));
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.view===name));
-  window.scrollTo(0,0);
+  if (!(opts && opts.keepScroll)) window.scrollTo(0,0);
   if (name==='home') loadHome();
   if (name==='calendar') loadMonth();
   if (name==='admin') loadAdmin();
@@ -1233,6 +1299,62 @@ function toggleRecent(){
   const open = $('recent').classList.contains('hidden');
   localStorage.setItem('recentOpen', open ? '1' : '0');
   $('recent').classList.toggle('hidden', !open); $('recentFold').classList.toggle('open', open);
+}
+// ===== 회비 =====
+// 안내 글(dues)은 누구나, 입금 계좌(dues_account)는 승인된 회원만 읽을 수 있음 (DB 권한: schema23)
+let dues = { text: '', acct: null };
+async function loadDues(){
+  const { data } = await db.from('club_settings').select('key,value').in('key', ['dues', 'dues_account']);
+  const g = k => ((data || []).find(r => r.key === k) || {}).value || '';
+  let a = null; try { a = JSON.parse(g('dues_account') || 'null'); } catch {}
+  dues = { text: g('dues').trim(), acct: a && a.number ? a : null };
+  renderDues();
+}
+function renderDues(){
+  const canSee = approved(), a = dues.acct;
+  const show = !!dues.text || (canSee && !!a);
+  $('duesCard').classList.toggle('hidden', !show);
+  if (!show) return;
+  $('duesText').innerHTML = dues.text.split('\n').map(l => `<div class="pl">${esc(l.trim()) || '&nbsp;'}</div>`).join('');
+  $('duesAcct').innerHTML = !canSee
+    ? `<div class="link" onclick="acctLocked()"><span>입금 계좌</span><span class="muted" style="font-weight:500">${state.user ? '승인 후 볼 수 있어요' : '로그인하면 보여요'}</span></div>`
+    : !a ? ''
+    : `<div class="link" id="acctBtn" onclick="toggleAcct()"><span>입금 계좌</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
+       <div class="acctBox hidden" id="acctBox" onclick="copyAcct()">
+         <div style="min-width:0"><div class="bank">${esc(a.bank || '')}</div><div class="num">${esc(a.number)}</div>${a.holder ? `<div class="muted">예금주 ${esc(a.holder)}</div>` : ''}</div>
+         <span class="copy">복사</span>
+       </div>`;
+  const open = localStorage.getItem('duesOpen') === '1';
+  $('duesBody').classList.toggle('hidden', !open); $('duesFold').classList.toggle('open', open);
+}
+function toggleDues(){
+  const open = $('duesBody').classList.contains('hidden');
+  localStorage.setItem('duesOpen', open ? '1' : '0');
+  $('duesBody').classList.toggle('hidden', !open); $('duesFold').classList.toggle('open', open);
+}
+function toggleAcct(){ const open = $('acctBox').classList.toggle('hidden') === false; $('acctBtn').classList.toggle('open', open); }
+function acctLocked(){
+  if (!requireLogin()) return;
+  toast(state.user.status === 'blocked' ? '휴식 상태라 볼 수 없어요' : '관리자 승인 후 볼 수 있어요');
+}
+function copyAcct(){ const a = dues.acct; if (a) copyText(`${a.bank ? a.bank + ' ' : ''}${a.number}`, '계좌번호를 복사했어요. 은행 앱에 붙여 넣으세요'); }
+async function copyText(t, msg){
+  try { await navigator.clipboard.writeText(t); return toast(msg); } catch {}
+  const ta = document.createElement('textarea');   // 클립보드 API 가 막힌 브라우저용
+  ta.value = t; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;opacity:0';
+  document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, t.length);
+  let ok = false; try { ok = document.execCommand('copy'); } catch {}
+  ta.remove();
+  if (ok) toast(msg); else prompt('아래 내용을 길게 눌러 복사하세요', t);
+}
+async function saveDues(){
+  if (!isAdmin()) return toast('관리자만 수정할 수 있어요');
+  const text = $('fDues').value.trim();
+  const a = { bank: $('fBank').value.trim(), number: $('fAcctNo').value.trim(), holder: $('fHolder').value.trim() };
+  if ((a.bank || a.holder) && !a.number) return toast('계좌번호를 입력하세요');
+  const { error } = await db.from('club_settings').upsert([{ key: 'dues', value: text }, { key: 'dues_account', value: a.number ? JSON.stringify(a) : '' }]);
+  if (error) return showError(error);
+  dues = { text, acct: a.number ? a : null }; toast('회비 안내를 저장했습니다');
 }
 function toggleRules(){
   const open = $('rulesBody').classList.contains('hidden');
@@ -1391,15 +1513,18 @@ async function loadComments(){
   $('comments').innerHTML = data.length ? data.map(c => `
     <div class="cmt">
       <div class="who"><span><b>${esc(c.profiles ? c.profiles.name + crown(c.profiles) : '회원')}</b> · ${fmtDT(c.created_at)}</span>
-        ${(c.user_id === myId() || manage) ? `<button class="linkBtn" style="padding:0 4px" onclick="deleteComment('${c.id}')">삭제</button>` : ''}</div>
+        ${(c.user_id === myId() || manage) ? `<button class="linkBtn" style="padding:6px 8px;margin:-6px -8px -6px 0" onclick="deleteComment('${c.id}')">삭제</button>` : ''}</div>
       <div class="txt">${esc(c.content)}</div>
     </div>`).join('') : '<div class="muted" style="padding:4px 0">아직 댓글이 없어요. 송금 완료, 늦게 도착 같은 메모를 남겨 보세요.</div>';
 }
+let cmtBusy = false;
 async function submitComment(){
   if (!requireLogin(submitComment)) return;
   if (!(await requireApproved())) return;
-  const c = $('fComment').value.trim(); if (!c) return;
+  const c = $('fComment').value.trim(); if (!c || cmtBusy) return;
+  cmtBusy = true;
   const { error } = await db.from('comments').insert({ meetup_id: state.current.id, user_id: myId(), content: c });
+  cmtBusy = false;
   if (error) return showError(error);
   $('fComment').value = ''; loadComments();
 }
@@ -1511,6 +1636,7 @@ async function loadHome(){
       <div class="muted">${fmtDate(m.date)} · ${esc(m.location||'')} · ${apCount(m)}명 참가</div>
     </div>`).join('') : '<div class="empty">아직 지난 모임이 없어요</div>';
   renderRules();
+  loadDues();
   loadNoticeStrip();
   $('links').innerHTML = LINKS.map((l, i) => `<div class="link" onclick="openLink(${i})"><span>${esc(l.name)}</span><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></div>`).join('');
   $('profileNotice').classList.toggle('hidden', !state.user || complete(state.user));
@@ -1527,9 +1653,19 @@ async function loadHome(){
 }
 
 // ===== 상세 =====
-async function openDetail(id, pop){
-  await loadSettings();   // 다른 기기에서 바꾼 이름 표시 방식 반영
-  const { data, error } = await db.from('meetups').select('*, host:profiles!meetups_created_by_profile_fk(name,experience,gender,birth_year,role,show_crown), participants(*, profiles(name,experience,gender,birth_year,role,show_crown,is_guest)), matches(*)').eq('id', id).single();
+// 오래 걸리는 불러오기 동안 화면 맨 위에 진행 막대 (0.15초 넘을 때만)
+let busyN = 0, busyT = null;
+function busy(on){
+  busyN = Math.max(0, busyN + (on ? 1 : -1)); clearTimeout(busyT);
+  if (busyN) busyT = setTimeout(() => $('loadbar').classList.add('on'), 150); else $('loadbar').classList.remove('on');
+}
+let detailSeq = 0;
+async function openDetail(id, pop, keepScroll){
+  const seq = ++detailSeq;
+  busy(true);
+  const [, { data, error }] = await Promise.all([loadSettings(), db.from('meetups').select('*, host:profiles!meetups_created_by_profile_fk(name,experience,gender,birth_year,role,show_crown), participants(*, profiles(name,experience,gender,birth_year,role,show_crown,is_guest)), matches(*)').eq('id', id).single()]);   // 이름 표시 방식(설정)도 함께
+  busy(false);
+  if (seq !== detailSeq) return;   // 그 사이 다른 모임을 눌렀으면 무시
   if (error && error.code !== 'PGRST116') return showError(error);
   if (!data){   // 삭제된 모임 (뒤로가기, 오래된 목록 등)
     toast('삭제됐거나 없는 모임이에요');
@@ -1541,8 +1677,8 @@ async function openDetail(id, pop){
   data.pending = data.participants.filter(p => p.status === 'pending');
   data.participants = data.participants.filter(p => p.status !== 'pending');
   data.matches.sort((a,b)=>a.round-b.round || a.court-b.court);
-  showView('detail', { pop });
-  history.replaceState({ view: 'detail', id }, '');
+  showView('detail', { pop, keepScroll });
+  history.replaceState(Object.assign({ view: 'detail', id }, pop && history.state && history.state.modal ? { modal: history.state.modal } : {}), '');
   state.current = data;
   renderDetail();
   loadComments();
@@ -1694,12 +1830,12 @@ function renderBracket(){
     const div = document.createElement('div'); div.className='round';
     const doneCnt = ms.filter(x=>x.score_a!=null&&x.score_b!=null).length;
     div.innerHTML = `<div class="rhdr"><span>${r}라운드</span><small>${ms.length}경기 · 완료 ${doneCnt}</small></div>` + ms.map(x=>`
-      <div class="match ${x.score_a!=null&&x.score_b!=null?'done':''}" data-id="${x.id}">
+      <div class="match${edit?' edit':''} ${x.score_a!=null&&x.score_b!=null?'done':''}" data-id="${x.id}">
         <div class="team">${slot(x,'a',0,playing)}${slot(x,'a',1,playing)}</div>
         <div class="score">
-          <input class="sc" type="number" min="0" value="${x.score_a??''}" ${dis} onchange="saveScore('${x.id}','score_a',this.value)">
+          <input class="sc" type="number" inputmode="numeric" min="0" value="${x.score_a??''}" ${dis} onchange="saveScore('${x.id}','score_a',this.value)">
           <span>:</span>
-          <input class="sc" type="number" min="0" value="${x.score_b??''}" ${dis} onchange="saveScore('${x.id}','score_b',this.value)">
+          <input class="sc" type="number" inputmode="numeric" min="0" value="${x.score_b??''}" ${dis} onchange="saveScore('${x.id}','score_b',this.value)">
         </div>
         <div class="team">${slot(x,'b',0,playing)}${slot(x,'b',1,playing)}</div>
         <div class="foot">${edit
@@ -1750,6 +1886,7 @@ async function resetBracket(){
   m.matches = []; toast('대진표를 초기화했습니다'); renderDetail();
 }
 async function deleteMatch(id){
+  if (!confirm('이 경기를 삭제할까요?')) return;
   const { error } = await db.from('matches').delete().eq('id', id);
   if (error) return showError(error);
   state.current.matches = state.current.matches.filter(x=>x.id!==id); renderBracket();
