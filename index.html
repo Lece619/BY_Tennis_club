@@ -374,7 +374,7 @@
 
   <!-- 모임 상세 화면 -->
   <section id="viewDetail" class="hidden">
-    <button class="back" onclick="showView(state.prevView)"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>뒤로</button>
+    <button class="back" onclick="goBack()"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>뒤로</button>
     <div class="card" id="detailInfo"></div>
     <div class="card">
       <div class="row"><div><strong>참가자 <span id="pCount" class="muted"></span></strong><span class="muted" style="font-size:12px;margin-left:6px;font-weight:400"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--accent);vertical-align:-1px"></span> 주최자</span></div><button class="shareMini" id="shareBtn" onclick="shareMeetup()" title="카톡으로 공유"><svg viewBox="0 0 24 24"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.7 6.7L5.6 21.5c-.1.3.2.5.5.3l4.6-3.1c.4 0 .8.1 1.3.1 5.5 0 10-3.6 10-8S17.5 3 12 3z"/></svg>공유</button></div>
@@ -416,7 +416,7 @@
   </section>
   <!-- 공지사항 -->
   <section id="viewNotices" class="hidden">
-    <button class="back" onclick="showView(state.prevView)"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>뒤로</button>
+    <button class="back" onclick="goBack()"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>뒤로</button>
     <div class="row" style="margin-bottom:12px">
       <strong style="font-size:18px">공지사항</strong>
       <button class="primary hidden" id="noticeNewBtn" onclick="openNotice()">+ 공지 작성</button>
@@ -455,13 +455,13 @@
       </div>
       <div style="margin-top:12px;padding:12px;background:var(--soft);border:1px solid #d1d5db;border-radius:12px">
         <div style="font-size:14px;font-weight:600">회비 안내 · 입금 계좌</div>
-        <div class="muted">홈의 "회비" 카드에 보입니다. 안내 글은 누구나, 입금 계좌는 승인된 회원만 볼 수 있고 누르면 복사됩니다.</div>
+        <div class="muted">홈의 "회비" 카드에 보입니다. 안내 글은 누구나, 입금 계좌는 승인된 회원(게스트 제외)만 볼 수 있고 누르면 복사됩니다.</div>
         <textarea id="fDues" style="min-height:90px;margin-top:8px;font-size:14px" placeholder="예: 월 회비 30,000원, 매월 10일까지 입금"></textarea>
         <div class="two" style="margin-top:8px"><input id="fBank" placeholder="은행 (예: 카카오뱅크)" autocomplete="off"><input id="fHolder" placeholder="예금주" autocomplete="off"></div>
         <input id="fAcctNo" placeholder="계좌번호 (예: 3333-01-1234567)" autocomplete="off" style="margin-top:8px">
         <div style="display:flex;gap:8px;margin-top:8px"><button class="ghost" onclick="saveDues()">회비 안내 저장</button><button class="danger" onclick="deleteDues()">삭제</button></div>
       </div>
-      <div id="ownerSettings">
+      <div id="ownerSettings" class="hidden">
         <div style="margin-top:12px;padding:12px;background:var(--soft);border:1px solid #d1d5db;border-radius:12px">
           <div style="font-size:14px;font-weight:600">회칙 수정 <span class="muted" style="font-weight:400">(대표만)</span></div>
           <div class="muted">줄 앞에 "제n장"은 제목, "• "는 조항, "◦ "와 "▪ "는 하위 항목으로 표시됩니다. 저장하면 모든 회원 화면에 바로 반영됩니다.</div>
@@ -490,7 +490,7 @@
 </main>
 
 <!-- 모임 생성 -->
-<div class="modal" id="createModal" onclick="if(event.target===this)closeCreate()">
+<div class="modal" id="createModal" onclick="if(event.target===this&&bdDown===this)closeCreate()">
   <div class="sheet">
     <div class="row"><strong id="createTitle">모임 만들기</strong><button class="icon" onclick="closeCreate()">&times;</button></div>
     <label>종류</label>
@@ -530,7 +530,7 @@
 </div>
 
 <!-- 로그인 -->
-<div class="modal" id="loginModal" onclick="if(event.target===this)closeLogin()">
+<div class="modal" id="loginModal" onclick="if(event.target===this&&bdDown===this)closeLogin()">
   <div class="sheet" style="text-align:center">
     <img src="icon-192.png" alt="" style="width:72px;height:72px;border-radius:50%">
     <div style="font-weight:700;font-size:17px;margin-top:8px">로그인이 필요합니다</div>
@@ -542,7 +542,7 @@
 </div>
 
 <!-- 회원 정보 -->
-<div class="modal" id="memberModal" onclick="if(event.target===this)closeMember()">
+<div class="modal" id="memberModal" onclick="if(event.target===this&&bdDown===this)closeMember()">
   <div class="sheet">
     <div class="row"><strong>회원 정보</strong><button class="icon" onclick="closeMember()">&times;</button></div>
     <div id="memberBody" style="margin-top:10px"></div>
@@ -550,7 +550,7 @@
 </div>
 
 <!-- 공지 작성/수정 -->
-<div class="modal" id="noticeModal" onclick="if(event.target===this)closeNotice()">
+<div class="modal" id="noticeModal" onclick="if(event.target===this&&bdDown===this)closeNotice()">
   <div class="sheet">
     <div class="row"><strong id="noticeTitle">공지 작성</strong><button class="icon" onclick="closeNotice()">&times;</button></div>
     <label>제목</label>
@@ -566,7 +566,7 @@
 </div>
 
 <!-- 건의하기 -->
-<div class="modal" id="suggestModal" onclick="if(event.target===this)closeSuggest()">
+<div class="modal" id="suggestModal" onclick="if(event.target===this&&bdDown===this)closeSuggest()">
   <div class="sheet">
     <div class="row"><strong>건의하기</strong><button class="icon" onclick="closeSuggest()">&times;</button></div>
     <p class="muted" style="margin:4px 0 0">모임 운영에 대한 건의나 불만 사항을 적어 주세요. 관리자에게만 보이며, 보낸 사람 이름이 함께 전달됩니다.</p>
@@ -577,7 +577,7 @@
 </div>
 
 <!-- 게스트 등록/로그인 -->
-<div class="modal" id="guestModal" onclick="if(event.target===this)closeGuest()">
+<div class="modal" id="guestModal" onclick="if(event.target===this&&bdDown===this)closeGuest()">
   <div class="sheet">
     <div class="row"><strong>게스트로 참여</strong><button class="icon" onclick="closeGuest()">&times;</button></div>
     <p class="muted" style="margin:4px 0 0">카카오 계정 없이 참여할 때 씁니다. 다시 로그인할 때는 <b>현재 닉네임</b>과 <b>현재 전화번호</b>를 넣으세요. 내 정보에서 바꿨다면 바뀐 값으로 들어옵니다. 전화번호는 관리자에게만 보입니다.</p>
@@ -590,7 +590,7 @@
 </div>
 
 <!-- 내 정보 -->
-<div class="modal" id="profileModal" onclick="if(event.target===this)closeProfile()">
+<div class="modal" id="profileModal" onclick="if(event.target===this&&bdDown===this)closeProfile()">
   <div class="sheet">
     <div class="row"><strong id="profileTitle">내 정보</strong><button class="icon" onclick="closeProfile()">&times;</button></div>
     <button class="linkBtn hidden" id="claimLink" onclick="showClaim()">관리자 인증</button>
@@ -677,9 +677,10 @@ document.getElementById('clubName').textContent = CLUB_NAME;
 document.title = CLUB_NAME;
 
 const $ = id => document.getElementById(id);
+let bdDown = null; document.addEventListener('pointerdown', e => { bdDown = e.target; }, true);   // 창 바깥 클릭 판정용
 const pad = n => String(n).padStart(2,'0');
 const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-const todayStr = ymd(new Date());
+let todayStr = ymd(new Date());   // 다른 앱에 갔다 오면 다시 계산 (자정 넘김 대비)
 const DOW = ['일','월','화','수','목','금','토'];
 const LINKS = [   // 홈 아래 코트 예약 링크. 여기만 고치면 됩니다
   { name: '비와이 테니스',          url: 'https://naver.me/GalHNGsb' },
@@ -743,7 +744,10 @@ const state = {
 function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), Math.max(1800, msg.length*70)); }
 function showError(e){
   console.error(e);
-  const msg = (e && e.message) || String(e);
+  const msg = (e && e.message) || String(e), code = e && e.code;
+  if (/Failed to fetch|Load failed|NetworkError/i.test(msg)) return toast('인터넷 연결을 확인해 주세요');
+  if (code === '23505' || /duplicate key/.test(msg)) return toast('이미 등록돼 있어요');
+  if (code === '23514' || code === '22P02' || /check constraint|invalid input syntax/.test(msg)) return toast('입력값을 확인해 주세요');
   if (/schema cache|does not exist|relation/.test(msg)) {
     $('banner').innerHTML = '데이터베이스 준비가 안 됐습니다. Supabase → SQL Editor 에서 <code>schema.sql</code> 과 <code>schema2_auth.sql</code> 을 실행해 주세요.';
     $('banner').classList.remove('hidden');
@@ -810,6 +814,7 @@ async function setUser(u){
     name: meta.name || meta.full_name || meta.preferred_username || '회원',
     avatar_url: meta.avatar_url || meta.picture || null };
   renderUser();
+  watchApproval();   // 승인 대기면 첫 화면과 상관없이 자동 확인
 }
 function renderUser(){
   const u = state.user;
@@ -848,7 +853,7 @@ window.addEventListener('popstate', e => {
   const st = e.state;
   if (!st) return showView('home', { pop: true });
   if (st.view === 'detail' && st.id) openDetail(st.id, true);
-  else showView(st.view || 'home', { pop: true });
+  else showView(!st.view || st.view === 'detail' ? 'home' : st.view, { pop: true });   // id 없는 상세 기록은 홈으로
 });
 let pollTimer = null;
 async function refreshUser(){
@@ -861,7 +866,7 @@ async function refreshUser(){
 }
 async function manualRefresh(){
   const changed = await refreshUser();
-  if (changed && approved()) toast('가입이 승인됐어요!'); else if (!changed) toast('아직 승인 전이에요');
+  if (changed && approved()) toast('가입이 승인됐어요!'); else if (!changed) toast(state.user && state.user.status === 'blocked' ? '아직 휴식 상태예요' : '아직 승인 전이에요');
   refreshView();
 }
 function watchApproval(){
@@ -881,7 +886,9 @@ let hiddenAt = 0;
 document.addEventListener('visibilitychange', async () => {
   if (document.hidden){ hiddenAt = Date.now(); return; }
   const changed = state.user ? await refreshUser() : false;
-  const stale = hiddenAt && Date.now() - hiddenAt > 15000;
+  const today = ymd(new Date()), dayChanged = today !== todayStr;
+  if (dayChanged){ if (state.selected === todayStr) state.selected = today; todayStr = today; }
+  const stale = dayChanged || (hiddenAt && Date.now() - hiddenAt > 15000);
   const typing = document.activeElement && document.activeElement.matches('input,select,textarea');
   if ((changed || stale) && !typing && !document.querySelector('.modal.open')) refreshView(true);
 });
@@ -917,9 +924,16 @@ async function linkKakao(){
     showError(error);
   }
 }
+// 로그인 창을 띄운 동작을 로그인 뒤 이어서 실행 (프로필을 불러올 때까지 잠깐 기다림)
+async function resumeAfterLogin(next){
+  if (!next) return;
+  for (let i = 0; i < 40 && !(state.user && state.user.status); i++) await new Promise(r => setTimeout(r, 100));
+  if (state.user) next();
+}
 function openGuest(){ $('guestModal').classList.add('open'); setTimeout(()=>$('gName').focus(), 50); }
 function closeGuest(){ $('guestModal').classList.remove('open'); }
 async function guestAuth(){
+  const next = afterLogin;   // 로그인 창을 띄운 동작 (참가·댓글 등)
   const name = $('gName').value.trim();
   const phone = $('gPhone').value.replace(/\D/g, '');
   if (!name) return toast('이름을 입력하세요');
@@ -927,7 +941,7 @@ async function guestAuth(){
   const email = `guest-${phone}@guest.bytennis.app`;
   const password = await sha256(`${phone}:${name.replace(/\s/g,'')}:BY-TENNIS`);
   const r = await db.auth.signInWithPassword({ email, password });
-  if (!r.error){ closeGuest(); closeLogin(); toast('게스트로 로그인했습니다'); return; }
+  if (!r.error){ closeGuest(); closeLogin(); toast('로그인했습니다'); resumeAfterLogin(next); return; }
   if (!/invalid login credentials/i.test(r.error.message)) return showError(r.error);
   const t = await db.rpc('phone_taken', { p: phone });
   if (!t.error && t.data === 'kakao') return toast('이 번호는 카카오로 가입한 회원이에요. 카카오 로그인을 이용해 주세요');
@@ -1001,7 +1015,7 @@ async function claimAdmin(){
   const { data, error } = await db.rpc(toOwner ? 'claim_owner' : 'claim_admin', { code });
   if (error) return showError(error);
   if (!data) return toast('코드가 맞지 않습니다');
-  state.user.role = toOwner ? 'owner' : 'admin'; state.user.status = 'approved';
+  state.user.role = toOwner ? 'owner' : 'admin'; state.user.status = 'approved'; state.user.is_guest = false;
   renderUser(); closeProfile(); toast(toOwner ? '대표가 되었습니다 ★' : '관리자가 되었습니다'); refreshView();
 }
 async function changeOwnerCode(){
@@ -1063,11 +1077,16 @@ function memberRow(p, actions){
     </div>`;
 }
 const sb = (label, fn, cls='ghost') => `<button class="${cls}" style="min-height:32px;padding:4px 10px;font-size:13px" onclick="${fn}">${label}</button>`;
+// 관리 화면 입력칸: 고치는 중인 칸은 승인·새로고침 때 서버 값으로 덮어쓰지 않음
+const fillIfClean = (id, v) => { const el = $(id); if (!el.dataset.dirty) el.value = v; };
+const markClean = (...ids) => ids.forEach(id => { delete $(id).dataset.dirty; });
+document.querySelectorAll('#viewAdmin textarea, #viewAdmin input').forEach(el => el.addEventListener('input', () => { el.dataset.dirty = '1'; }));
 async function loadAdmin(){
+  $('ownerSettings').classList.toggle('hidden', !isOwner());
   renderFmtSeg();
   loadSuggestions();
-  await loadSettings(); $('fRules').value = state.rules || '';
-  await loadDues(); $('fDues').value = dues.text; $('fBank').value = dues.acct?.bank || ''; $('fAcctNo').value = dues.acct?.number || ''; $('fHolder').value = dues.acct?.holder || '';
+  await loadSettings(); fillIfClean('fRules', state.rules || '');
+  await loadDues(); fillIfClean('fDues', dues.text); fillIfClean('fBank', dues.acct?.bank || ''); fillIfClean('fAcctNo', dues.acct?.number || ''); fillIfClean('fHolder', dues.acct?.holder || '');
   const [{ data, error }, pv, pj] = await Promise.all([
     db.from('profiles').select('*').order('created_at'),
     db.from('profile_private').select('id,phone'),
@@ -1116,14 +1135,16 @@ async function setGuest(id, guest){
   if (error) return showError(error);
   toast(guest ? '게스트로 바꿨습니다' : '회원으로 올렸습니다'); loadAdmin();
 }
-async function setStatus(id, status){
+async function setStatus(id, status, from){
   const { error } = await db.from('profiles').update({ status }).eq('id', id);
   if (error) return showError(error);
-  toast(status === 'approved' ? '승인했습니다' : '휴식 상태로 바꿨습니다'); loadAdmin();
+  toast(status === 'approved' ? (from === 'blocked' ? '휴식을 해제했습니다' : '승인했습니다') : '휴식 상태로 바꿨습니다'); loadAdmin();
 }
 
 // ===== 달력 =====
+let monthSeq = 0;
 async function loadMonth(){
+  const seq = ++monthSeq;
   const first = new Date(state.year, state.month, 1);
   const last  = new Date(state.year, state.month+1, 0);
   const { data, error } = await db.from('meetups')
@@ -1131,6 +1152,7 @@ async function loadMonth(){
     .gte('date', ymd(first)).lte('date', ymd(last))
     .order('date').order('start_time');
   if (error) showError(error); else $('banner').classList.add('hidden');
+  if (seq !== monthSeq) return;   // 그 사이 다른 달로 넘겼으면 무시
   state.meetups = data || [];
   renderCalendar(); renderDayList();
 }
@@ -1212,6 +1234,7 @@ const cnt = (n, c) => c ? `${n}/${c}명` : `${n}명`;
 function closeCreate(){ $('createModal').classList.remove('open'); resetCreateForm(); }
 function openEdit(){
   const m = state.current; if (!m) return;
+  if (m.kind === 'regular' && !isAdmin()) return toast(`${KIND.regular}은 관리자만 수정할 수 있어요`);
   if (!canManage(m)) return toast(m.kind === 'regular' ? `${KIND.regular}은 관리자만 수정할 수 있어요` : `${KIND.flash}은 만든 사람만 수정할 수 있어요`);
   const kinds = isAdmin() ? ['flash','regular'] : ['flash'];
   $('fKind').innerHTML = kinds.map(k => `<option value="${k}" ${k===m.kind?'selected':''}>${KIND[k]}</option>`).join('');
@@ -1241,7 +1264,7 @@ async function submitCreate(){
     delete row.created_by; delete row.created_by_id;
     const { error } = await db.from('meetups').update(row).eq('id', id);
     if (error) return showError(error);
-    closeCreate(); toast('수정했습니다'); openDetail(id); return;
+    closeCreate(); toast('수정했습니다'); openDetail(id, true, true); return;
   }
   const { data, error } = await db.from('meetups').insert(row).select().single();
   if (error) return showError(error);
@@ -1259,8 +1282,12 @@ function showView(name, opts){
   if (name === 'admin' && !isAdmin()) name = 'home';
   const pop = opts && opts.pop;
   if (!pop){
+    const st = history.state || {};
     const same = name === state.view && name !== 'detail';
-    (same ? history.replaceState : history.pushState).call(history, { view: name }, '');
+    const closing = st.modal && !document.querySelector('.modal.open#' + st.modal);   // 방금 닫힌 창의 기록
+    if (closing && same) {}                                                          // 창 기록은 창 쪽에서 되돌림
+    else if (closing || same) history.replaceState({ view: name, from: closing ? 1 : st.from }, '');
+    else history.pushState({ view: name, from: 1 }, '');
   }
   state.current = null;
   state.view = name;
@@ -1273,6 +1300,8 @@ function showView(name, opts){
   if (name==='admin') loadAdmin();
   if (name==='notices') loadNotices();
 }
+// 화면의 '뒤로': 앱 안에서 넘어온 화면이면 기록을 되돌리고, 링크로 바로 들어왔으면 이전 화면으로
+function goBack(){ if (history.state && history.state.from) history.back(); else showView(state.prevView); }
 function showCalendar(){ showView('calendar'); }
 function setUpFilter(v){ localStorage.setItem('upFilter', v); renderUpcoming(); }
 function renderUpcoming(){
@@ -1312,23 +1341,23 @@ function toggleRecent(){
 // 안내 글(dues)은 누구나, 입금 계좌(dues_account)는 승인된 회원만 읽을 수 있음 (DB 권한: schema23)
 let dues = { text: '', acct: null };
 async function loadDues(){
-  const { data } = await db.from('club_settings').select('key,value').in('key', ['dues', 'dues_account']);
+  const { data } = await db.from('club_settings').select('key,value').in('key', ['dues', 'dues_account', 'dues_has_acct']);
   const g = k => ((data || []).find(r => r.key === k) || {}).value || '';
   let a = null; try { a = JSON.parse(g('dues_account') || 'null'); } catch {}
-  dues = { text: g('dues').trim(), acct: a && a.number ? a : null };
+  dues = { text: g('dues').trim(), acct: a && a.number ? a : null, hasAcct: g('dues_has_acct') !== '0' };   // 계좌 유무는 누구나 알 수 있게 따로 저장
   renderDues();
 }
 function renderDues(){
-  const canSee = approved(), a = dues.acct;
+  const canSee = approved() && !state.user.is_guest, a = dues.acct;   // 입금 계좌는 회원 이상 (DB: schema24)
   const show = !!dues.text || (canSee && !!a);
   $('duesCard').classList.toggle('hidden', !show);
   if (!show) return;
   $('duesText').innerHTML = dues.text.split('\n').map(l => `<div class="pl">${esc(l.trim()) || '&nbsp;'}</div>`).join('');
   $('duesAcct').innerHTML = !canSee
-    ? `<div class="link" onclick="acctLocked()"><span>입금 계좌</span><span class="muted" style="font-weight:500">${state.user ? '승인 후 볼 수 있어요' : '로그인하면 보여요'}</span></div>`
+    ? (dues.hasAcct ? `<div class="link" onclick="acctLocked()"><span>입금 계좌</span><span class="muted" style="font-weight:500">${!state.user ? '로그인하면 보여요' : state.user.is_guest ? '회원만 볼 수 있어요' : '승인 후 볼 수 있어요'}</span></div>` : '')
     : !a ? ''
     : `<div class="link" id="acctBtn" onclick="toggleAcct()"><span>입금 계좌</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
-       <div class="acctBox hidden" id="acctBox" onclick="copyAcct()">
+       <div class="acctBox hidden" id="duesAcctBox" onclick="copyAcct()">
          <div style="min-width:0"><div class="bank">${esc(a.bank || '')}</div><div class="num">${esc(a.number)}</div>${a.holder ? `<div class="muted">예금주 ${esc(a.holder)}</div>` : ''}</div>
          <span class="copy">복사</span>
        </div>`;
@@ -1340,10 +1369,10 @@ function toggleDues(){
   localStorage.setItem('duesOpen', open ? '1' : '0');
   $('duesBody').classList.toggle('hidden', !open); $('duesFold').classList.toggle('open', open);
 }
-function toggleAcct(){ const open = $('acctBox').classList.toggle('hidden') === false; $('acctBtn').classList.toggle('open', open); }
+function toggleAcct(){ const open = $('duesAcctBox').classList.toggle('hidden') === false; $('acctBtn').classList.toggle('open', open); }
 function acctLocked(){
   if (!requireLogin()) return;
-  toast(state.user.status === 'blocked' ? '휴식 상태라 볼 수 없어요' : '관리자 승인 후 볼 수 있어요');
+  toast(state.user.is_guest ? '입금 계좌는 회원만 볼 수 있어요' : state.user.status === 'blocked' ? '휴식 상태라 볼 수 없어요' : '관리자 승인 후 볼 수 있어요');
 }
 function copyAcct(){ const a = dues.acct; if (a) copyText(`${a.bank ? a.bank + ' ' : ''}${a.number}`, '계좌번호를 복사했어요. 은행 앱에 붙여 넣으세요'); }
 async function copyText(t, msg){
@@ -1360,17 +1389,17 @@ async function saveDues(){
   const text = $('fDues').value.trim();
   const a = { bank: $('fBank').value.trim(), number: $('fAcctNo').value.trim(), holder: $('fHolder').value.trim() };
   if ((a.bank || a.holder) && !a.number) return toast('계좌번호를 입력하세요');
-  const { error } = await db.from('club_settings').upsert([{ key: 'dues', value: text }, { key: 'dues_account', value: a.number ? JSON.stringify(a) : '' }]);
+  const { error } = await db.from('club_settings').upsert([{ key: 'dues', value: text }, { key: 'dues_account', value: a.number ? JSON.stringify(a) : '' }, { key: 'dues_has_acct', value: a.number ? '1' : '0' }]);
   if (error) return showError(error);
-  dues = { text, acct: a.number ? a : null }; toast('회비 안내를 저장했습니다');
+  dues = { text, acct: a.number ? a : null, hasAcct: !!a.number }; markClean('fDues','fBank','fAcctNo','fHolder'); toast('회비 안내를 저장했습니다');
 }
 async function deleteDues(){
   if (!isAdmin()) return toast('관리자만 수정할 수 있어요');
   if (!confirm('회비 안내 글과 입금 계좌를 모두 지울까요?\n홈의 회비 카드가 사라집니다.')) return;
-  const { error } = await db.from('club_settings').delete().in('key', ['dues', 'dues_account']);
+  const { error } = await db.from('club_settings').delete().in('key', ['dues', 'dues_account', 'dues_has_acct']);
   if (error) return showError(error);
   ['fDues','fBank','fAcctNo','fHolder'].forEach(id => $(id).value = '');
-  dues = { text: '', acct: null }; toast('회비 안내를 삭제했습니다');
+  dues = { text: '', acct: null, hasAcct: false }; markClean('fDues','fBank','fAcctNo','fHolder'); toast('회비 안내를 삭제했습니다');
 }
 function toggleRules(){
   const open = $('rulesBody').classList.contains('hidden');
@@ -1415,7 +1444,7 @@ async function saveRules(){
   const v = $('fRules').value.trim();
   const { error } = await db.from('club_settings').upsert({ key: 'rules', value: v });
   if (error) return showError(error);
-  state.rules = v; toast('회칙을 저장했습니다');
+  state.rules = v; markClean('fRules'); toast('회칙을 저장했습니다');
 }
 // ===== 카톡 공유 =====
 const SITE_URL = location.origin + location.pathname;
@@ -1499,7 +1528,7 @@ function memberAdminMenu(u){
     else if (!u.is_guest) b.push(sb('관리자 지정', `memberAct('setRole','${u.id}','admin')`));
   }
   if (u.role !== 'admin' || isOwner()){
-    b.push(sb(u.status === 'blocked' ? '휴식 해제' : '휴식', `memberAct('setStatus','${u.id}','${u.status === 'blocked' ? 'approved' : 'blocked'}')`));
+    b.push(sb(u.status === 'blocked' ? '휴식 해제' : '휴식', `memberAct('setStatus','${u.id}','${u.status === 'blocked' ? 'approved' : 'blocked'}','${u.status === 'blocked' ? 'blocked' : ''}')`));
     b.push(sb('삭제', `memberAct('deleteMember','${u.id}',${n})`, 'danger'));
   }
   if (!b.length) return '';
@@ -1595,7 +1624,8 @@ async function submitNotice(){
     ? await db.from('notices').update({ ...row, updated_at: new Date().toISOString() }).eq('id', noticeEditId)
     : await db.from('notices').insert({ ...row, user_id: myId() });
   if (error) return showError(error);
-  closeNotice(); toast(noticeEditId ? '공지를 수정했습니다' : '공지를 올렸습니다'); loadNotices();
+  const edited = !!noticeEditId;
+  closeNotice(); toast(edited ? '공지를 수정했습니다' : '공지를 올렸습니다'); loadNotices();
 }
 async function deleteNotice(id){
   if (!confirm('이 공지를 삭제할까요?')) return;
@@ -1606,8 +1636,8 @@ async function deleteNotice(id){
 function openLink(i){
   const l = LINKS[i]; if (!l) return;
   if (!confirm(`${l.name} 사이트로 이동할까요?\n새 탭이 열립니다.`)) return;
-  const w = window.open(l.url, '_blank', 'noopener');
-  if (!w) location.href = l.url;   // 팝업 차단 시
+  const w = window.open(l.url, '_blank');   // 'noopener' 를 주면 항상 null 이 와서 앱 화면까지 넘어가 버림
+  if (w) w.opener = null; else location.href = l.url;   // 팝업 차단 시에만 이 화면에서 열기
 }
 function setStartView(v){
   localStorage.setItem('startView', v);
@@ -1686,8 +1716,8 @@ async function openDetail(id, pop, keepScroll){
   if (error && error.code !== 'PGRST116') return showError(error);
   if (!data){   // 삭제된 모임 (뒤로가기, 오래된 목록 등)
     toast('삭제됐거나 없는 모임이에요');
-    history.replaceState({ view: state.view }, '');
-    if (state.view === 'detail') showView(state.prevView, { pop: true });
+    if (state.view === 'detail'){ history.replaceState({ view: state.prevView }, ''); showView(state.prevView, { pop: true }); }
+    else history.replaceState({ view: state.view, from: history.state && history.state.from }, '');
     return;
   }
   data.participants.sort((a,b)=>a.created_at.localeCompare(b.created_at));
@@ -1695,7 +1725,7 @@ async function openDetail(id, pop, keepScroll){
   data.participants = data.participants.filter(p => p.status !== 'pending');
   data.matches.sort((a,b)=>a.round-b.round || a.court-b.court);
   showView('detail', { pop, keepScroll });
-  history.replaceState(Object.assign({ view: 'detail', id }, pop && history.state && history.state.modal ? { modal: history.state.modal } : {}), '');
+  history.replaceState(Object.assign({}, history.state, { view: 'detail', id }), '');
   state.current = data;
   renderDetail();
   loadComments();
@@ -1736,7 +1766,7 @@ function renderDetail(){
   $('joinBtn').className = mineP || past ? 'ghost' : 'primary';
   $('joinBtn').disabled = full || past;
   $('deleteBtn').classList.toggle('hidden', !canDelete(m));
-  $('editBtn').classList.toggle('hidden', !manage);
+  $('editBtn').classList.toggle('hidden', !manage || (m.kind === 'regular' && !isAdmin()));
   $('genBtn').classList.toggle('hidden', !manage);
   $('rounds').classList.toggle('hidden', !manage);
   $('genBtn').disabled = names.length < 4;
@@ -1750,7 +1780,7 @@ function renderDetail(){
   renderBracket();
 }
 async function toggleJoin(){
-  if(!requireLogin(toggleJoin)) return;
+  if(!requireLogin(joinAfterLogin)) return;
   const m = state.current;
   if (m.date < todayStr) return toast('지난 모임은 참가하거나 취소할 수 없어요');
   const mine = m.participants.find(p=>p.user_id===myId()) || (m.pending||[]).find(p=>p.user_id===myId());
@@ -1761,24 +1791,31 @@ async function toggleJoin(){
   if (error) return showError(error);
   const requested = !mine && !isHost(m) && (m.join_mode === 'approve' || state.user.is_guest);
   toast(mine ? (mine.status === 'pending' ? '신청을 취소했습니다' : '참가를 취소했습니다') : requested ? '참가 신청했어요. 주최자가 승인하면 명단에 올라가요' : '참가했습니다');
-  openDetail(m.id);
+  openDetail(m.id, true, true);
+}
+function joinAfterLogin(){
+  const m = state.current; if (!m) return;
+  if ([...m.participants, ...(m.pending || [])].some(p => p.user_id === myId())) return toast('이미 참가했거나 신청한 모임이에요');
+  toggleJoin();
 }
 async function approveParticipant(id){
+  const m = state.current;
+  if (m.capacity && m.participants.length >= m.capacity && !confirm(`정원 ${m.capacity}명이 이미 찼어요. 그래도 승인할까요?`)) return;
   const { error } = await db.from('participants').update({ status: 'approved' }).eq('id', id);
   if (error) return showError(error);
-  toast('승인했습니다'); openDetail(state.current.id);
+  toast('승인했습니다'); openDetail(state.current.id, true, true);
 }
 async function removeParticipant(id, name){
   if (!confirm(`${name} 님을 참가 명단에서 뺄까요?`)) return;
   const { error } = await db.from('participants').delete().eq('id', id);
   if (error) return showError(error);
-  toast('명단에서 뺐습니다'); openDetail(state.current.id);
+  toast('명단에서 뺐습니다'); openDetail(state.current.id, true, true);
 }
 async function deleteMeetup(){
   if (!confirm('이 모임을 삭제할까요? 참가자와 대진도 함께 지워집니다.')) return;
   const { error } = await db.from('meetups').delete().eq('id', state.current.id);
   if (error) return showError(error);
-  toast('삭제했습니다'); showView(state.prevView);
+  toast('삭제했습니다'); goBack();
 }
 
 // ===== 대진 =====
@@ -1820,7 +1857,7 @@ async function generateBracket(){
   if (res.error) return showError(res.error);
   res = await db.from('matches').insert(rows);
   if (res.error) return showError(res.error);
-  toast('대진표를 만들었습니다'); openDetail(m.id);
+  toast('대진표를 만들었습니다'); openDetail(m.id, true, true);
 }
 
 function renderBracket(){
@@ -1911,7 +1948,8 @@ async function deleteMatch(id){
   state.current.matches = state.current.matches.filter(x=>x.id!==id); renderBracket();
 }
 async function saveScore(id, field, val){
-  const v = val==='' ? null : +val;
+  const v = val==='' ? null : Math.floor(+val);
+  if (v !== null && !(v >= 0)){ toast('점수는 0 이상의 숫자로 넣어 주세요'); return renderBracket(); }
   const { error } = await db.from('matches').update({ [field]: v }).eq('id', id);
   if (error) return showError(error);
   const mt = state.current.matches.find(x=>x.id===id); mt[field]=v;
@@ -1944,9 +1982,18 @@ function renderStandings(){
     </table>` : '';
 }
 
+// 두 번 눌러도 한 번만 실행 (느린 망에서 모임·대진이 두 번 생기는 것 방지)
+['submitCreate','generateBracket','toggleJoin','guestAuth','submitNotice','submitSuggest','addMatch','approveParticipant','removeParticipant',
+ 'saveDues','deleteDues','saveProfile','deleteMeetup','resetBracket','claimAdmin'].forEach(n => {
+  const f = window[n]; if (typeof f !== 'function') return;
+  let running = false;
+  window[n] = async function(...a){ if (running) return; running = true; try { return await f.apply(this, a); } finally { running = false; } };
+});
+
 // ===== 시작 =====
+history.replaceState({ view: localStorage.getItem('startView') || 'home' }, '');
 Promise.all([initAuth(), loadSettings()]).then(() => {
-  const v = localStorage.getItem('startView') || 'home'; history.replaceState({ view: v }, ''); showView(v, { pop: true });
+  const v = localStorage.getItem('startView') || 'home'; history.replaceState(Object.assign({}, history.state, { view: v }), ''); showView(v, { pop: true });
   // 카톡 공유 링크(?m=모임id)로 들어왔거나, 카카오 로그인 전에 보던 모임이 있으면 그 모임 열기
   const deep = new URLSearchParams(location.search).get('m') || sessionStorage.getItem('returnMeetup');
   sessionStorage.removeItem('returnMeetup');
