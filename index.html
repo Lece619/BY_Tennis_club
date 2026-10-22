@@ -350,7 +350,7 @@
   </section>
 
   <!-- 달력 화면 -->
-  <section id="viewCalendar">
+  <section id="viewCalendar" class="hidden">
     <div class="card">
       <div class="cal-head">
         <button class="icon" onclick="moveMonth(-1)">&lsaquo;</button>
@@ -714,8 +714,11 @@ function fmtName(p){
   return parts.join(' / ') + crown(pr);
 }
 async function loadSettings(){
-  const { data } = await db.from('club_settings').select('key,value');
-  (data || []).forEach(r => { if (r.key === 'display_format') state.displayFormat = r.value; if (r.key === 'rules') state.rules = r.value; });
+  const { data, error } = await db.from('club_settings').select('key,value');
+  if (error) return false;
+  data.forEach(r => { if (r.key === 'display_format') state.displayFormat = r.value; if (r.key === 'rules') state.rules = r.value; });
+  state.settingsLoaded = true;
+  return true;
 }
 async function setDisplayFormat(v){
   const { error } = await db.from('club_settings').upsert({ key: 'display_format', value: v });
@@ -747,6 +750,8 @@ function showError(e){
   const msg = (e && e.message) || String(e), code = e && e.code;
   if (/Failed to fetch|Load failed|NetworkError/i.test(msg)) return toast('인터넷 연결을 확인해 주세요');
   if (code === '23505' || /duplicate key/.test(msg)) return toast('이미 등록돼 있어요');
+  if (code === '23503' || /foreign key/.test(msg)) return toast('삭제됐거나 없는 모임이에요');
+  if (/jwt expired|JWT expired|invalid jwt/i.test(msg)) return toast('로그인이 만료됐어요. 다시 로그인해 주세요');
   if (code === '23514' || code === '22P02' || /check constraint|invalid input syntax/.test(msg)) return toast('입력값을 확인해 주세요');
   if (/schema cache|does not exist|relation/.test(msg)) {
     $('banner').innerHTML = '데이터베이스 준비가 안 됐습니다. Supabase → SQL Editor 에서 <code>schema.sql</code> 과 <code>schema2_auth.sql</code> 을 실행해 주세요.';
@@ -790,9 +795,8 @@ async function initAuth(){
   db.auth.onAuthStateChange((event, s) => {
     const uid = s ? s.user.id : null;
     if (uid === myId()) return;                     // 같은 사용자면 무시
-    setUser(s ? s.user : null).then(() => { refreshView(); maybeOnboard(); });
+    setUser(s ? s.user : null).then(() => { refreshView(true); maybeOnboard(); });
   });
-  maybeOnboard();
 }
 function maybeOnboard(){
   if (!state.user || complete(state.user)) return;
@@ -815,6 +819,7 @@ async function setUser(u){
     avatar_url: meta.avatar_url || meta.picture || null };
   renderUser();
   watchApproval();   // 승인 대기면 첫 화면과 상관없이 자동 확인
+  resetAdminDrafts();
 }
 function renderUser(){
   const u = state.user;
@@ -867,7 +872,7 @@ async function refreshUser(){
 async function manualRefresh(){
   const changed = await refreshUser();
   if (changed && approved()) toast('가입이 승인됐어요!'); else if (!changed) toast(state.user && state.user.status === 'blocked' ? '아직 휴식 상태예요' : '아직 승인 전이에요');
-  refreshView();
+  refreshView(true);
 }
 function watchApproval(){
   clearInterval(pollTimer); pollTimer = null;
@@ -877,7 +882,7 @@ function watchApproval(){
     if (await refreshUser()){
       clearInterval(pollTimer); pollTimer = null;
       if (approved()) toast('가입이 승인됐어요! 이제 모임에 참가할 수 있어요');
-      refreshView();
+      refreshView(true);
     }
   }, 20000);
 }
@@ -886,12 +891,25 @@ let hiddenAt = 0;
 document.addEventListener('visibilitychange', async () => {
   if (document.hidden){ hiddenAt = Date.now(); return; }
   const changed = state.user ? await refreshUser() : false;
-  const today = ymd(new Date()), dayChanged = today !== todayStr;
-  if (dayChanged){ if (state.selected === todayStr) state.selected = today; todayStr = today; }
-  const stale = dayChanged || (hiddenAt && Date.now() - hiddenAt > 15000);
-  const typing = document.activeElement && document.activeElement.matches('input,select,textarea');
-  if ((changed || stale) && !typing && !document.querySelector('.modal.open')) refreshView(true);
+  const stale = rollDay() || (hiddenAt && Date.now() - hiddenAt > 15000);
+  if (changed || stale) refreshPending = true;
+  refreshIfIdle();
 });
+// 자정이 지나면 '오늘'과 달력 위치를 새 날짜로 (바뀌었으면 true)
+function rollDay(){
+  const t = ymd(new Date()); if (t === todayStr) return false;
+  if (state.selected === todayStr){ state.selected = t; const d = new Date(); state.year = d.getFullYear(); state.month = d.getMonth(); }
+  todayStr = t; return true;
+}
+// 입력 중이거나 창이 열려 있으면 새로고침을 미뤘다가 나중에
+let refreshPending = false;
+function refreshIfIdle(){
+  if (!refreshPending) return;
+  const typing = document.activeElement && document.activeElement.matches('input,select,textarea');
+  if (typing || document.querySelector('.modal.open')) return;
+  refreshPending = false; refreshView(true);
+}
+setInterval(() => { if (document.hidden) return; if (rollDay()) refreshPending = true; refreshIfIdle(); }, 60000);
 let afterLogin = null;
 function requireLogin(next){
   if (state.user) return true;
@@ -901,7 +919,7 @@ function requireLogin(next){
 }
 function closeLogin(){ $('loginModal').classList.remove('open'); afterLogin = null; }
 async function loginKakao(){
-  if (state.current) sessionStorage.setItem('returnMeetup', state.current.id);
+  if (state.current){ sessionStorage.setItem('returnMeetup', state.current.id); if (afterLogin === joinAfterLogin) sessionStorage.setItem('returnJoin', '1'); }
   const { error } = await db.auth.signInWithOAuth({ provider: 'kakao', options: { redirectTo: location.origin + location.pathname, scopes: 'profile_nickname profile_image' } });
   if (error) showError(error);
 }
@@ -927,8 +945,11 @@ async function linkKakao(){
 // 로그인 창을 띄운 동작을 로그인 뒤 이어서 실행 (프로필을 불러올 때까지 잠깐 기다림)
 async function resumeAfterLogin(next){
   if (!next) return;
+  const view = state.view, cur = state.current && state.current.id;
   for (let i = 0; i < 40 && !(state.user && state.user.status); i++) await new Promise(r => setTimeout(r, 100));
-  if (state.user) next();
+  if (!state.user || state.view !== view || ((state.current && state.current.id) || undefined) !== (cur || undefined)) return;
+  if (document.querySelector('#profileModal.open')) return;   // 프로필 먼저 채우게
+  next();
 }
 function openGuest(){ $('guestModal').classList.add('open'); setTimeout(()=>$('gName').focus(), 50); }
 function closeGuest(){ $('guestModal').classList.remove('open'); }
@@ -1004,7 +1025,7 @@ async function resignAdmin(){
   const { error } = await db.rpc('resign_admin');
   if (error) return showError(error);
   state.user.role = 'member'; renderUser(); closeProfile(); toast('일반 회원이 되었습니다');
-  if (state.view === 'admin') showView('home'); else refreshView();
+  if (state.view === 'admin') showView('home'); else refreshView(true);
 }
 let crownOn = true;
 function setCrown(v){ crownOn = v; document.querySelectorAll('#crownRow .seg button').forEach(b => b.classList.toggle('active', b.dataset.v === (v?'on':'off'))); }
@@ -1016,7 +1037,7 @@ async function claimAdmin(){
   if (error) return showError(error);
   if (!data) return toast('코드가 맞지 않습니다');
   state.user.role = toOwner ? 'owner' : 'admin'; state.user.status = 'approved'; state.user.is_guest = false;
-  renderUser(); closeProfile(); toast(toOwner ? '대표가 되었습니다 ★' : '관리자가 되었습니다'); refreshView();
+  renderUser(); closeProfile(); toast(toOwner ? '대표가 되었습니다 ★' : '관리자가 되었습니다'); refreshView(true);
 }
 async function changeOwnerCode(){
   const c = $('fNewOwnerCode').value.trim();
@@ -1054,11 +1075,14 @@ async function saveProfile(){
   if (error) return /duplicate|unique/i.test(error.message) ? toast('이미 사용 중인 닉네임이에요') : showError(error);
   if (phone && phone !== (state.user.phone || '')){
     const pe = await db.from('profile_private').upsert({ id: myId(), phone });
-    if (pe.error) return /duplicate|unique/i.test(pe.error.message) ? toast('이미 등록된 전화번호예요') : showError(pe.error);
+    if (pe.error){
+      Object.assign(state.user, row); renderUser(); closeProfile(); refreshView(true);   // 닉네임 등은 이미 저장됨
+      return /duplicate|unique/i.test(pe.error.message) ? toast('전화번호는 이미 등록된 번호라 저장하지 못했어요. 나머지는 저장됐어요') : showError(pe.error);
+    }
     row.phone = phone;
   }
   const credChanged = state.user.byPhone && (row.name !== state.user.name || (row.phone && row.phone !== state.user.phone));
-  Object.assign(state.user, row); renderUser(); closeProfile(); refreshView();
+  Object.assign(state.user, row); renderUser(); closeProfile(); refreshView(true);
   toast(credChanged ? '저장했어요. 다음 로그인부터 바뀐 닉네임과 번호로 들어오세요' : '저장했습니다');
 }
 let phones = {};
@@ -1080,13 +1104,14 @@ const sb = (label, fn, cls='ghost') => `<button class="${cls}" style="min-height
 // 관리 화면 입력칸: 고치는 중인 칸은 승인·새로고침 때 서버 값으로 덮어쓰지 않음
 const fillIfClean = (id, v) => { const el = $(id); if (!el.dataset.dirty) el.value = v; };
 const markClean = (...ids) => ids.forEach(id => { delete $(id).dataset.dirty; });
+function resetAdminDrafts(){ ['fRules','fDues','fBank','fAcctNo','fHolder'].forEach(id => { const el = $(id); if (el) delete el.dataset.dirty; }); }
 document.querySelectorAll('#viewAdmin textarea, #viewAdmin input').forEach(el => el.addEventListener('input', () => { el.dataset.dirty = '1'; }));
 async function loadAdmin(){
   $('ownerSettings').classList.toggle('hidden', !isOwner());
   renderFmtSeg();
   loadSuggestions();
-  await loadSettings(); fillIfClean('fRules', state.rules || '');
-  await loadDues(); fillIfClean('fDues', dues.text); fillIfClean('fBank', dues.acct?.bank || ''); fillIfClean('fAcctNo', dues.acct?.number || ''); fillIfClean('fHolder', dues.acct?.holder || '');
+  if (await loadSettings()) fillIfClean('fRules', state.rules || '');
+  if (await loadDues()){ fillIfClean('fDues', dues.text); fillIfClean('fBank', dues.acct?.bank || ''); fillIfClean('fAcctNo', dues.acct?.number || ''); fillIfClean('fHolder', dues.acct?.holder || ''); }
   const [{ data, error }, pv, pj] = await Promise.all([
     db.from('profiles').select('*').order('created_at'),
     db.from('profile_private').select('id,phone'),
@@ -1114,13 +1139,13 @@ async function loadAdmin(){
   }).join('') || '<div class="empty">회원이 없어요</div>';
 }
 async function deleteMember(id, name){
-  if (!confirm(`${name} 님을 삭제할까요?\n계정과 참가 기록이 모두 지워지고 되돌릴 수 없어요.`)) return;
+  if (!confirm(`${name} 님을 삭제할까요?\n계정과 참가 기록이 모두 지워지고 되돌릴 수 없어요.`)) return false;
   const { error } = await db.rpc('delete_member', { target: id });
   if (error) return showError(error);
   toast('삭제했습니다'); loadAdmin();
 }
 async function transferOwner(id, name){
-  if (!confirm(`${name} 님에게 대표를 넘길까요?\n나는 관리자가 됩니다.`)) return;
+  if (!confirm(`${name} 님에게 대표를 넘길까요?\n나는 관리자가 됩니다.`)) return false;
   const { error } = await db.rpc('transfer_owner', { target: id });
   if (error) return showError(error);
   state.user.role = 'admin'; renderUser(); toast(`${name} 님이 대표가 되었습니다`); loadAdmin();
@@ -1264,7 +1289,7 @@ async function submitCreate(){
     delete row.created_by; delete row.created_by_id;
     const { error } = await db.from('meetups').update(row).eq('id', id);
     if (error) return showError(error);
-    closeCreate(); toast('수정했습니다'); openDetail(id, true, true); return;
+    closeCreate(); toast('수정했습니다'); await openDetail(id, true, true); return;
   }
   const { data, error } = await db.from('meetups').insert(row).select().single();
   if (error) return showError(error);
@@ -1289,6 +1314,8 @@ function showView(name, opts){
     else if (closing || same) history.replaceState({ view: name, from: closing ? 1 : st.from }, '');
     else history.pushState({ view: name, from: 1 }, '');
   }
+  if (name !== 'detail') detailSeq++;   // 불러오던 상세가 늦게 끝나도 이 화면을 덮지 않게
+  if (name === 'admin' && !pop) resetAdminDrafts();   // 관리 화면에 새로 들어오면 서버 값으로
   state.current = null;
   state.view = name;
   if (name !== 'detail' && name !== 'notices') state.prevView = name;
@@ -1341,11 +1368,13 @@ function toggleRecent(){
 // 안내 글(dues)은 누구나, 입금 계좌(dues_account)는 승인된 회원만 읽을 수 있음 (DB 권한: schema23)
 let dues = { text: '', acct: null };
 async function loadDues(){
-  const { data } = await db.from('club_settings').select('key,value').in('key', ['dues', 'dues_account', 'dues_has_acct']);
+  const { data, error } = await db.from('club_settings').select('key,value').in('key', ['dues', 'dues_account', 'dues_has_acct']);
+  if (error) return false;   // 불러오지 못했으면 화면·입력칸을 그대로 둠
   const g = k => ((data || []).find(r => r.key === k) || {}).value || '';
   let a = null; try { a = JSON.parse(g('dues_account') || 'null'); } catch {}
-  dues = { text: g('dues').trim(), acct: a && a.number ? a : null, hasAcct: g('dues_has_acct') !== '0' };   // 계좌 유무는 누구나 알 수 있게 따로 저장
+  dues = { text: g('dues').trim(), acct: a && a.number ? a : null, hasAcct: g('dues_has_acct') !== '0', loaded: true };   // 계좌 유무는 누구나 알 수 있게 따로 저장
   renderDues();
+  return true;
 }
 function renderDues(){
   const canSee = approved() && !state.user.is_guest, a = dues.acct;   // 입금 계좌는 회원 이상 (DB: schema24)
@@ -1374,7 +1403,7 @@ function acctLocked(){
   if (!requireLogin()) return;
   toast(state.user.is_guest ? '입금 계좌는 회원만 볼 수 있어요' : state.user.status === 'blocked' ? '휴식 상태라 볼 수 없어요' : '관리자 승인 후 볼 수 있어요');
 }
-function copyAcct(){ const a = dues.acct; if (a) copyText(`${a.bank ? a.bank + ' ' : ''}${a.number}`, '계좌번호를 복사했어요. 은행 앱에 붙여 넣으세요'); }
+function copyAcct(){ const a = dues.acct; if (a) copyText(a.number, `${a.bank ? a.bank + ' ' : ''}계좌번호를 복사했어요. 은행 앱에 붙여 넣으세요`); }
 async function copyText(t, msg){
   try { await navigator.clipboard.writeText(t); return toast(msg); } catch {}
   const ta = document.createElement('textarea');   // 클립보드 API 가 막힌 브라우저용
@@ -1386,12 +1415,13 @@ async function copyText(t, msg){
 }
 async function saveDues(){
   if (!isAdmin()) return toast('관리자만 수정할 수 있어요');
+  if (!dues.loaded) return toast('회비 정보를 불러오지 못했어요. 새로고침 후 다시 해 주세요');
   const text = $('fDues').value.trim();
   const a = { bank: $('fBank').value.trim(), number: $('fAcctNo').value.trim(), holder: $('fHolder').value.trim() };
   if ((a.bank || a.holder) && !a.number) return toast('계좌번호를 입력하세요');
   const { error } = await db.from('club_settings').upsert([{ key: 'dues', value: text }, { key: 'dues_account', value: a.number ? JSON.stringify(a) : '' }, { key: 'dues_has_acct', value: a.number ? '1' : '0' }]);
   if (error) return showError(error);
-  dues = { text, acct: a.number ? a : null, hasAcct: !!a.number }; markClean('fDues','fBank','fAcctNo','fHolder'); toast('회비 안내를 저장했습니다');
+  dues = { text, acct: a.number ? a : null, hasAcct: !!a.number, loaded: true }; markClean('fDues','fBank','fAcctNo','fHolder'); toast('회비 안내를 저장했습니다');
 }
 async function deleteDues(){
   if (!isAdmin()) return toast('관리자만 수정할 수 있어요');
@@ -1399,7 +1429,7 @@ async function deleteDues(){
   const { error } = await db.from('club_settings').delete().in('key', ['dues', 'dues_account', 'dues_has_acct']);
   if (error) return showError(error);
   ['fDues','fBank','fAcctNo','fHolder'].forEach(id => $(id).value = '');
-  dues = { text: '', acct: null, hasAcct: false }; markClean('fDues','fBank','fAcctNo','fHolder'); toast('회비 안내를 삭제했습니다');
+  dues = { text: '', acct: null, hasAcct: false, loaded: true }; markClean('fDues','fBank','fAcctNo','fHolder'); toast('회비 안내를 삭제했습니다');
 }
 function toggleRules(){
   const open = $('rulesBody').classList.contains('hidden');
@@ -1441,6 +1471,7 @@ async function deleteSuggestion(id){
 }
 async function saveRules(){
   if (!isOwner()) return toast('회칙은 대표만 수정할 수 있어요');
+  if (!state.settingsLoaded) return toast('회칙을 불러오지 못했어요. 새로고침 후 다시 해 주세요');
   const v = $('fRules').value.trim();
   const { error } = await db.from('club_settings').upsert({ key: 'rules', value: v });
   if (error) return showError(error);
@@ -1488,6 +1519,7 @@ async function shareMeetup(){
   catch { prompt('아래 내용을 복사해 단톡방에 붙여 넣으세요', `${text}\n참가 신청: ${url}`); }
 }
 
+let detailSeq = 0;   // 상세 불러오기 순번 (showView 에서도 올림)
 // ===== 회원 정보 =====
 function closeMember(){ $('memberModal').classList.remove('open'); }
 async function openMember(uid){
@@ -1535,15 +1567,15 @@ function memberAdminMenu(u){
   return `<div style="margin-top:14px"><div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px">관리</div><div style="display:flex;gap:6px;flex-wrap:wrap">${b.join('')}</div></div>`;
 }
 async function memberAct(fn, ...args){
-  closeMember();
-  await window[fn](...args);
+  const ok = await window[fn](...args);
+  if (ok !== false) closeMember();   // 확인창에서 취소하면 카드는 그대로
 }
 async function setMemberExp(uid, exp){
   const { error } = await db.from('profiles').update({ experience: exp }).eq('id', uid);
   if (error) return showError(error);
   toast('구력을 바꿨습니다'); openMember(uid);
   if (state.view === 'admin') loadAdmin();
-  if (state.view === 'detail' && state.current) openDetail(state.current.id, true);
+  if (state.view === 'detail' && state.current) openDetail(state.current.id, true, true);
 }
 
 // ===== 댓글 =====
@@ -1564,6 +1596,7 @@ async function loadComments(){
 }
 let cmtBusy = false;
 async function submitComment(){
+  if (!state.current) return;
   if (!requireLogin(submitComment)) return;
   if (!(await requireApproved())) return;
   const c = $('fComment').value.trim(); if (!c || cmtBusy) return;
@@ -1706,7 +1739,6 @@ function busy(on){
   busyN = Math.max(0, busyN + (on ? 1 : -1)); clearTimeout(busyT);
   if (busyN) busyT = setTimeout(() => $('loadbar').classList.add('on'), 150); else $('loadbar').classList.remove('on');
 }
-let detailSeq = 0;
 async function openDetail(id, pop, keepScroll){
   const seq = ++detailSeq;
   busy(true);
@@ -1716,7 +1748,7 @@ async function openDetail(id, pop, keepScroll){
   if (error && error.code !== 'PGRST116') return showError(error);
   if (!data){   // 삭제된 모임 (뒤로가기, 오래된 목록 등)
     toast('삭제됐거나 없는 모임이에요');
-    if (state.view === 'detail'){ history.replaceState({ view: state.prevView }, ''); showView(state.prevView, { pop: true }); }
+    if (state.view === 'detail'){ if (history.state && history.state.from) history.back(); else { history.replaceState({ view: state.prevView }, ''); showView(state.prevView, { pop: true }); } }
     else history.replaceState({ view: state.view, from: history.state && history.state.from }, '');
     return;
   }
@@ -1791,7 +1823,7 @@ async function toggleJoin(){
   if (error) return showError(error);
   const requested = !mine && !isHost(m) && (m.join_mode === 'approve' || state.user.is_guest);
   toast(mine ? (mine.status === 'pending' ? '신청을 취소했습니다' : '참가를 취소했습니다') : requested ? '참가 신청했어요. 주최자가 승인하면 명단에 올라가요' : '참가했습니다');
-  openDetail(m.id, true, true);
+  await openDetail(m.id, true, true);
 }
 function joinAfterLogin(){
   const m = state.current; if (!m) return;
@@ -1803,18 +1835,20 @@ async function approveParticipant(id){
   if (m.capacity && m.participants.length >= m.capacity && !confirm(`정원 ${m.capacity}명이 이미 찼어요. 그래도 승인할까요?`)) return;
   const { error } = await db.from('participants').update({ status: 'approved' }).eq('id', id);
   if (error) return showError(error);
-  toast('승인했습니다'); openDetail(state.current.id, true, true);
+  toast('승인했습니다'); await openDetail(state.current.id, true, true);
 }
 async function removeParticipant(id, name){
   if (!confirm(`${name} 님을 참가 명단에서 뺄까요?`)) return;
   const { error } = await db.from('participants').delete().eq('id', id);
   if (error) return showError(error);
-  toast('명단에서 뺐습니다'); openDetail(state.current.id, true, true);
+  toast('명단에서 뺐습니다'); await openDetail(state.current.id, true, true);
 }
 async function deleteMeetup(){
+  const m = state.current; if (!m || state.view !== 'detail') return;
   if (!confirm('이 모임을 삭제할까요? 참가자와 대진도 함께 지워집니다.')) return;
-  const { error } = await db.from('meetups').delete().eq('id', state.current.id);
+  const { error } = await db.from('meetups').delete().eq('id', m.id);
   if (error) return showError(error);
+  state.current = null;   // 뒤로 가는 사이 다시 눌러도 두 번 실행되지 않게
   toast('삭제했습니다'); goBack();
 }
 
@@ -1857,7 +1891,7 @@ async function generateBracket(){
   if (res.error) return showError(res.error);
   res = await db.from('matches').insert(rows);
   if (res.error) return showError(res.error);
-  toast('대진표를 만들었습니다'); openDetail(m.id, true, true);
+  toast('대진표를 만들었습니다'); await openDetail(m.id, true, true);
 }
 
 function renderBracket(){
@@ -1991,18 +2025,24 @@ function renderStandings(){
 });
 
 // ===== 시작 =====
-history.replaceState({ view: localStorage.getItem('startView') || 'home' }, '');
+// 시작 주소 기억 후 정리 (?m= 이 남아 있으면 새로고침 때 같은 모임이 다시 열림)
+const startParams = new URLSearchParams(location.search);
+const cameFromLogin = startParams.has('code') || location.hash.includes('access_token');   // 카카오 로그인 후 돌아온 경우
+history.replaceState({ view: localStorage.getItem('startView') || 'home' }, '', startParams.has('m') ? location.pathname : location.href);
 Promise.all([initAuth(), loadSettings()]).then(() => {
   const v = localStorage.getItem('startView') || 'home'; history.replaceState(Object.assign({}, history.state, { view: v }), ''); showView(v, { pop: true });
   // 카톡 공유 링크(?m=모임id)로 들어왔거나, 카카오 로그인 전에 보던 모임이 있으면 그 모임 열기
-  const deep = new URLSearchParams(location.search).get('m') || sessionStorage.getItem('returnMeetup');
-  sessionStorage.removeItem('returnMeetup');
+  const ret = cameFromLogin ? sessionStorage.getItem('returnMeetup') : null;
+  const wantJoin = cameFromLogin && sessionStorage.getItem('returnJoin') === '1';
+  sessionStorage.removeItem('returnMeetup'); sessionStorage.removeItem('returnJoin');
+  const deep = startParams.get('m') || ret;
   if (deep && /^[0-9a-f-]{36}$/i.test(deep)){
-    db.from('meetups').select('id').eq('id', deep).maybeSingle().then(({ data }) => {
-      if (data) openDetail(deep); else toast('삭제됐거나 없는 모임이에요');
-      history.replaceState(history.state, '', location.pathname);   // 주소창의 ?m= 정리
+    db.from('meetups').select('id').eq('id', deep).maybeSingle().then(async ({ data }) => {
+      if (!data){ toast('삭제됐거나 없는 모임이에요'); return maybeOnboard(); }
+      await openDetail(deep);
+      if (wantJoin && state.user) joinAfterLogin(); else maybeOnboard();
     });
-  }
+  } else maybeOnboard();
 });
 </script>
 </body>
