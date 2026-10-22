@@ -8,7 +8,7 @@
 | 저장소 | https://github.com/Lece619/BY_Tennis_club (main 브랜치 → GitHub Pages 자동 배포, 1~2분) |
 | 데이터 | Supabase 프로젝트 `wzjoiitmujirjtliwwjg` (공개 키는 index.html 상단, service_role 키는 절대 넣지 말 것) |
 | 로그인 | 카카오 OAuth(Supabase Kakao provider), 전화번호 계정(이름+번호 → 이메일/비밀번호로 변환) |
-| 상태 (2026-10-22) | SQL 1~24단계 적용됨, 25단계(관리자가 남의 프로필·관리자 상태를 못 바꾸게) 실행 필요. 실사용 테스트 단계 |
+| 상태 (2026-10-22) | SQL 1~25단계 모두 적용됨. 실사용 테스트 단계 |
 
 ## 파일 구성
 - `index.html` : 화면 + 동작 전체. 상단 상수로 모임 이름(`CLUB_NAME`), 모임 종류 이름(`KIND`), 코트 예약 링크(`LINKS`) 수정
